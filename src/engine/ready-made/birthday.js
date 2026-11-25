@@ -29,10 +29,10 @@ export default function birthday({ to, from }) {
     // ── the gift box ──
     text('Open this one first.', [45, 684, 340], [44, 860, 230, { size: 22, ...LEFT }], [664, 232, 340, { size: 21 }]),
     { type: 'giftbox', mobile: [65, 790, 300], tablet: [276, 750, 340], desktop: [676, 190, 440], props: { present: 'butterflies', src: '', tag: to ? `for ${to}` : 'for you', ribbon: VIOLET, petals: 'jacaranda' } },
-    text('They’ve been waiting all morning.', [45, 1216, 340], [44, 926, 230, { size: 25, ...LEFT }], [696, 830, 400, { size: 21 }], INK),
+    text('They’ve been waiting all morning.', [45, 1238, 340], [44, 926, 230, { size: 25, ...LEFT }], [696, 830, 400, { size: 21 }], INK),
 
     // ── three reasons ──
-    heading('Better with you in it', [25, 1300, 380], [40, 1320, 560, { size: 54 }], [100, 1010, 1000, { size: 76 }]),
+    heading('Better with you in it', [25, 1312, 380], [40, 1320, 560, { size: 54 }], [100, 1010, 1000, { size: 76 }]),
     sticky('You remember the small things…', '…my chiya, my worst day, the name of my first dog.', '#F2D27A', [28, 1384, 226, { rotation: -4 }], [40, 1432, 250, { rotation: -4 }], [50, 1180, 300, { rotation: -5 }]),
     sticky('You laugh before the joke…', '…and somehow that’s the joke.', '#EBB5A6', [178, 1620, 226, { rotation: 3 }], [346, 1500, 250, { rotation: 3 }], [450, 1240, 300, { rotation: 2 }]),
     sticky('You make people feel…', '…like they’re the one you were waiting for.', '#B9C9A6', [30, 1864, 226, { rotation: -2 }], [130, 1762, 250, { rotation: -2 }], [850, 1170, 300, { rotation: -3 }]),

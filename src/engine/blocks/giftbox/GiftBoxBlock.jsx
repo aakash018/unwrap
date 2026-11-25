@@ -1,36 +1,37 @@
 // Gift box — a present to unwrap:
-//   tap once   → the ribbon comes undone
-//   tap again  → the lid lifts, petals fly, and the present comes up
+//   tap once   → the ribbon comes undone and slips off; light shows under the lid
+//   tap again  → the lid swings open, petals fly, and the present comes up
 //   then the present is there to play with; tapping the box closes it
 // What's inside is the sender's choice (presents.js). Words belong in a letter.
 //
 // The box is a render in layers (public/presents; how they're made:
 // tools/presents): its back and inside, the present, its front, its lid. The
-// silk is rendered white and tinted the sender's colour.
+// silk is rendered white and tinted the sender's colour. At rest it's pictures;
+// as it moves it's films, on two canvases (opening.js, film.js).
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Hint from '../shared/Hint';
-import { PETALS } from './petals';
 import { PRESENTS } from './presents';
 import { pictureOf } from './pictures';
-
-// Where each petal flies to (x, y, spin).
-const FLIGHTS = [
-  [-170, -230, 260], [160, -250, -200], [-220, -80, 180], [220, -110, -240], [-90, -300, 300], [90, -310, -320], [-250, -190, 140],
-  [250, -200, -160], [20, -340, 220], [-30, -260, -260], [-140, -320, 200], [150, -340, -180], [-200, -280, 240], [205, -270, -220],
-];
+import { AREA } from './area';
+import { loadFilms } from './film';
+import { createOpening } from './opening';
+import { burst } from './burst';
+import { calm } from './pageLayer';
 
 const STEPS = ['tap the ribbon', 'once more · खोल त!'];
+const PRESENT_AT = 430; // ms into the opening: the present starts up
 const LAYER = 'pointer-events-none absolute inset-0 size-full max-w-none';
+const FILM = { left: AREA.x, top: AREA.y, width: AREA.w, height: AREA.h };
+const FALLEN = { left: -60, top: 700 / 3, width: 420, height: 470 / 3 }; // where the fallen ribbon's picture goes
 
 const Layer = ({ name, className = '' }) => <img src={pictureOf(name)} alt="" draggable={false} className={`${LAYER} ${className}`} />;
 
-// Silk: the white render, multiplied by its colour.
-function Silk({ name, color, className = '' }) {
+// Silk: the white render, multiplied by its colour, cut out along its edge.
+function Silk({ name, color, style }) {
   const mask = `url(${pictureOf(name)})`;
   return (
-    <span className={`${LAYER} isolate ${className}`}>
-      <span className={LAYER} style={{ background: color, maskImage: mask, WebkitMaskImage: mask, maskSize: '100% 100%', WebkitMaskSize: '100% 100%' }} />
+    <span className={`${LAYER} isolate`} style={{ ...style, background: color, maskImage: mask, WebkitMaskImage: mask, maskSize: '100% 100%', WebkitMaskSize: '100% 100%' }}>
       <Layer name={name} className="mix-blend-multiply" />
     </span>
   );
@@ -41,51 +42,127 @@ const tagSize = (tag) => Math.min(15, Math.max(10, 150 / tag.length));
 
 export default function GiftBoxBlock({ props }) {
   const [step, setStep] = useState(0); // 0 tied, 1 untied, 2 open
-  const petals = PETALS[props.petals] ?? PETALS.marigold;
+  const [moving, setMoving] = useState(''); // '', 'untie', 'open' or 'close'
+  const [out, setOut] = useState(''); // the present: '', 'rising', 'out' or 'sinking'
+  const box = useRef(null);
+  const mouth = useRef(null);
+  const front = useRef(null);
+  const rear = useRef(null);
+  const opening = useRef(null);
+  const ribbon = useRef(props.ribbon);
   const tag = props.tag ?? props.to?.replace(/,$/, ''); // (boxes from before had `to`)
-  const { Component: Present, tap, up, pictures } = PRESENTS[props.present] ?? PRESENTS.roses;
+  const { Component: Present, tap, up, rise, pictures } = PRESENTS[props.present] ?? PRESENTS.roses;
 
-  // load what's inside while it's being unwrapped
+  useEffect(() => {
+    ribbon.current = props.ribbon;
+  }, [props.ribbon]);
+
+  useEffect(() => {
+    opening.current = createOpening({ front: front.current, rear: rear.current, color: () => ribbon.current });
+    return () => opening.current.stop();
+  }, []);
+
+  // fetch the films once the box is nearly on screen
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer.disconnect();
+        loadFilms().catch(() => {});
+      },
+      { rootMargin: '600px' },
+    );
+    observer.observe(box.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // and what's inside, while it's being unwrapped
   useEffect(() => {
     for (const name of [...pictures, 'petal-0', 'petal-1', 'petal-2']) new Image().src = pictureOf(name);
   }, [pictures]);
 
+  const timers = useRef([]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const later = (ms, action) => timers.current.push(setTimeout(action, ms));
+
+  const onTap = async () => {
+    if (moving) return;
+    const next = (step + 1) % 3;
+    const action = ['close', 'untie', 'open'][next];
+    setMoving('waiting');
+    const ready = await loadFilms().then(
+      () => true,
+      () => false,
+    );
+    // no films (they couldn't be fetched), or less motion wanted: just change
+    if (!ready || calm()) {
+      opening.current.settle(next);
+      setStep(next);
+      setOut(next === 2 ? 'out' : '');
+      setMoving('');
+      return;
+    }
+    setMoving(action);
+    if (action === 'open') {
+      later(PRESENT_AT - 110, () => burst(mouth.current, props.petals));
+      later(PRESENT_AT, () => setOut('rising'));
+    }
+    if (action === 'close') {
+      setOut('sinking');
+      later(340, () => setOut(''));
+    }
+    const played = await opening.current[action]();
+    if (!played) return; // stopped halfway: it's gone from the page
+    setStep(next);
+    setMoving('');
+  };
+
+  // what's a picture just now, and what's in the films
+  const tied = step === 0 && moving !== 'untie';
+  const lidShut = moving !== 'open' && moving !== 'close' && step < 2;
+  const fallen = moving === 'open' || (moving !== 'close' && moving !== 'untie' && step > 0);
+  const open = step === 2 || moving === 'open';
+
   return (
-    <div className="flex flex-col items-center gap-2 pb-4">
-      <div className="relative h-[374px] w-[300px]">
+    <div className="flex flex-col items-center">
+      <div ref={box} className={`relative h-[374px] w-[300px] origin-bottom ${moving === 'open' ? 'animate-heave' : ''}`}>
         {/* the box's canvas: its foot is 21 px above the canvas's bottom */}
         <div className="absolute -bottom-[21px] left-0 h-[330px] w-[300px]">
+          <img src={pictureOf('floor')} alt="" draggable={false} className="pointer-events-none absolute max-w-none" style={{ left: -60, top: 0, width: 420, height: 380 }} />
           <Layer name="box-back" />
+          <canvas ref={rear} width={AREA.w * 2} height={AREA.h * 2} className="pointer-events-none absolute max-w-none" style={FILM} />
+          <span ref={mouth} className="pointer-events-none absolute top-[130px] left-[40px] h-[30px] w-[220px]" />
         </div>
 
-        {step === 2 && (
-          <>
-            {/* light out of the box */}
-            <div className="pointer-events-none absolute -top-[20px] left-1/2 h-[360px] w-[440px] -translate-x-1/2 animate-fade bg-[radial-gradient(48%_50%_at_50%_62%,rgba(255,222,160,0.45),rgba(255,212,140,0.14)_52%,rgba(255,210,130,0)_76%)]" />
-            <div style={{ bottom: up }} className="absolute inset-x-0 z-10 flex animate-present justify-center">
+        {/* light out of the box */}
+        <div
+          className={`pointer-events-none absolute -top-[20px] left-1/2 h-[360px] w-[440px] origin-[50%_62%] -translate-x-1/2 bg-[radial-gradient(48%_50%_at_50%_62%,rgba(255,222,160,0.5),rgba(255,212,140,0.16)_52%,rgba(255,210,130,0)_76%)] ${open && moving !== 'close' ? 'animate-bloom' : 'opacity-0 transition-opacity duration-300'}`}
+        />
+        {out && (
+          // (until it's out it's cut off at the box's foot: it's inside)
+          <div className={`pointer-events-none absolute inset-0 z-10 ${out === 'out' ? '' : '[clip-path:inset(-400px_-400px_2px_-400px)]'}`}>
+            <div
+              style={{ bottom: up, '--rise': `${rise}px` }}
+              onAnimationEnd={(e) => e.target === e.currentTarget && out === 'rising' && setOut('out')}
+              className={`pointer-events-auto absolute inset-x-0 flex justify-center ${{ rising: 'animate-present', sinking: 'animate-sink' }[out] ?? ''}`}
+            >
               <Present src={props.src} />
             </div>
-          </>
+          </div>
         )}
 
         <button
           type="button"
-          onClick={() => setStep((step + 1) % 3)}
+          onClick={onTap}
           aria-label={['Untie the ribbon', 'Open the gift', 'Close the gift'][step]}
-          className={`absolute inset-x-[34px] bottom-0 z-20 block ${step === 2 ? 'h-[128px]' : 'h-[264px]'}`}
+          className={`absolute inset-x-[34px] bottom-0 z-20 block ${open ? 'h-[128px]' : 'h-[264px]'}`}
         >
           {/* (pictures only: they reach over the present, and mustn't catch its touches) */}
           <span className="pointer-events-none absolute -bottom-[21px] -left-[34px] block h-[330px] w-[300px]">
             <Layer name="box-front" />
-            {step < 2 && <Layer name="box-shade" />}
-            <Silk name="silk-band" color={props.ribbon} className={step > 0 ? 'animate-band' : ''} />
-            <span className={`${LAYER} ${step === 2 ? 'animate-lid' : ''}`}>
-              <Layer name="box-lid" />
-              <span className={`${LAYER} ${step > 0 ? 'animate-untie' : ''} origin-[50%_34%]`}>
-                <Layer name="lid-shade" />
-                <Silk name="silk-bow" color={props.ribbon} />
-              </span>
-            </span>
+            {lidShut && <Layer name="box-shade" />}
+            {/* untied: light shows under the lid */}
+            {step === 1 && !moving && <span className="absolute top-[180px] left-[34px] h-[30px] w-[232px] animate-leak bg-[radial-gradient(52%_60%_at_50%_22%,rgba(255,218,140,0.95),rgba(255,200,110,0.4)_45%,rgba(255,200,110,0)_100%)]" />}
 
             {/* the tag: who it's for */}
             {tag && (
@@ -98,24 +175,18 @@ export default function GiftBoxBlock({ props }) {
                 </span>
               </span>
             )}
+
+            {lidShut && <Layer name="box-lid" className={step === 1 && !moving ? 'animate-peek' : ''} />}
+            {tied && <Layer name="tied-shade" />}
+            {tied && <Silk name="silk-tied" color={props.ribbon} />}
+            {fallen && <Silk name="silk-fallen" color={props.ribbon} style={FALLEN} />}
+            <canvas ref={front} width={AREA.w * 2} height={AREA.h * 2} className="pointer-events-none absolute max-w-none" style={FILM} />
           </span>
         </button>
-
-        {step === 2 &&
-          FLIGHTS.map(([dx, dy, rot], i) => (
-            <span
-              key={i}
-              className={`pointer-events-none absolute top-[60%] left-1/2 z-30 animate-burst bg-contain bg-no-repeat ${petals.picture ? 'size-5' : 'h-[11px] w-4 rounded-[70%_30%_70%_30%]'}`}
-              style={{
-                '--dx': `${dx}px`,
-                '--dy': `${dy}px`,
-                '--rot': `${rot}deg`,
-                ...(petals.picture ? { backgroundImage: `url(${pictureOf(`petal-${i % 3}`)})` } : { backgroundColor: petals.colors[i % petals.colors.length] }),
-              }}
-            />
-          ))}
       </div>
-      <Hint>{STEPS[step] ?? tap}</Hint>
+      <span className="mt-8">
+        <Hint>{STEPS[step] ?? tap}</Hint>
+      </span>
     </div>
   );
 }

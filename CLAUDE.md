@@ -46,7 +46,13 @@ Read `README.md` for setup and the folder map.
   (Roses.jsx; the founder didn't want them to turn). Butterflies and the crane
   leave the box: they live on a sheet over the page (`pageLayer.js`), moved
   directly, not by React, and are put away when the box closes. The silk is rendered grey and
-  tinted the sender's colour in the browser. Anything else meant to look like a
+  tinted the sender's colour in the browser.
+  **The box opens on film** (25 Nov 2026: the opening "looks very cheap" when the
+  bow squashed and the lid slid off): the ribbon's fall is simulated
+  (`tools/presents/ribbon.h`) and, with the lid swinging open, rendered frame by
+  frame; `opening.js` plays the films on two canvases (`film.js`, `films.js` is
+  made by sheets.mjs), `burst.js` throws the petals. The films (~800 KB) are
+  fetched as the box comes near the screen. Anything else meant to look like a
   real thing should be made this way, never as flat SVG.
 - **Reading:** letters and hidden messages open in `blocks/shared/Reader.jsx`
   (a portal on the body). Receivers don't see a voice note with no recording.

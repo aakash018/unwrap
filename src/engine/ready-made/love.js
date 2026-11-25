@@ -31,7 +31,7 @@ export default function love({ to, from }) {
     // ── the gift box ──
     text('First, a little something.', [45, 684, 340], [44, 860, 230, { size: 21, ...LEFT }], [90, 1130, 480, { size: 26, ...LEFT }]),
     { type: 'giftbox', mobile: [65, 790, 300], tablet: [276, 750, 340], desktop: [640, 880, 470], props: { present: 'roses', src: '', tag: `for ${you}`, ribbon: CRIMSON, petals: 'rose' } },
-    text('तिमी भए पुग्छ\nYou are enough. You always were.', [45, 1216, 340], [44, 930, 230, { size: 25, ...LEFT }], [90, 1196, 560, { size: 32, ...LEFT }], CREAM),
+    text('तिमी भए पुग्छ\nYou are enough. You always were.', [45, 1238, 340], [44, 930, 230, { size: 25, ...LEFT }], [90, 1196, 560, { size: 32, ...LEFT }], CREAM),
 
     // ── three notes ──
     heading('Things I never say enough', [25, 1306, 380], [40, 1320, 560, { size: 54 }], [100, 1690, 1000, { size: 72 }]),

@@ -124,8 +124,10 @@ int main(int c,char**v){int W=atoi(v[2]),H=atoi(v[3]),S=atoi(v[4]);F turn=atof(v
   F tot=0;for(auto&l:Ls){l.p=(l.L.x+l.L.y+l.L.z)*(1-l.c);tot+=l.p;}for(auto&l:Ls)l.p/=tot;
   B.reserve(T.size()*2);build(0,T.size());fprintf(stderr,"%zu tris\n",T.size());
   V fw=norm(cam.at-cam.from),rt=norm(cross(fw,V(0,1,0))),up=cross(rt,fw);F th=tanf(cam.fov*M_PI/360);
-  vector<F>A(W*H*4);std::atomic<int>row{0};vector<std::thread>ts;
-  for(unsigned k=0;k<std::thread::hardware_concurrency();k++)ts.emplace_back([&]{for(int y;(y=row++)<H;)for(int x=0;x<W;x++){Rng r((uint64_t)y*W+x+77);V sum(0);F al=0;for(int s=0;s<S;s++){F px=(x+r.f())/W*2-1,py=1-(y+r.f())/H*2;V d=norm(fw+rt*(px*th*W/H)+up*(py*th));F a;V L=radiance(cam.from,d,r,a);if(L.x==L.x&&L.y==L.y&&L.z==L.z){sum=sum+L;al+=a;}}
-      F*q=&A[(y*W+x)*4];q[0]=sum.x/S;q[1]=sum.y/S;q[2]=sum.z/S;q[3]=al/S;}});
+  // REGION=x,y,w,h in the environment: only that part of the picture (it may reach outside it)
+  int X0=0,Y0=0,RW=W,RH=H;if(char*e=getenv("REGION"))sscanf(e,"%d,%d,%d,%d",&X0,&Y0,&RW,&RH);
+  vector<F>A(RW*RH*4);std::atomic<int>row{0};vector<std::thread>ts;
+  for(unsigned k=0;k<std::thread::hardware_concurrency();k++)ts.emplace_back([&]{for(int y;(y=row++)<RH;)for(int x=0;x<RW;x++){Rng r((uint64_t)y*RW+x+77);V sum(0);F al=0;for(int s=0;s<S;s++){F px=(x+X0+r.f())/W*2-1,py=1-(y+Y0+r.f())/H*2;V d=norm(fw+rt*(px*th*W/H)+up*(py*th));F a;V L=radiance(cam.from,d,r,a);if(L.x==L.x&&L.y==L.y&&L.z==L.z){sum=sum+L;al+=a;}}
+      F*q=&A[(y*RW+x)*4];q[0]=sum.x/S;q[1]=sum.y/S;q[2]=sum.z/S;q[3]=al/S;}});
   for(auto&t:ts)t.join();
-  FILE*f=fopen(v[7],"wb");for(int i=0;i<W*H;i++){F*q=&A[i*4];F a=q[3];unsigned char o[4]={0,0,0,(unsigned char)(a*255+.5f)};if(a>0)for(int k=0;k<3;k++){F x=q[k]/a*cam.exposure;x=(x*(2.51f*x+.03f))/(x*(2.43f*x+.59f)+.14f);x=clampf(x,0,1);x=x<=.0031308f?12.92f*x:1.055f*powf(x,1/2.4f)-.055f;o[k]=x*255+.5f;}fwrite(o,1,4,f);}fclose(f);}
+  FILE*f=fopen(v[7],"wb");for(int i=0;i<RW*RH;i++){F*q=&A[i*4];F a=q[3];unsigned char o[4]={0,0,0,(unsigned char)(a*255+.5f)};if(a>0)for(int k=0;k<3;k++){F x=q[k]/a*cam.exposure;x=(x*(2.51f*x+.03f))/(x*(2.43f*x+.59f)+.14f);x=clampf(x,0,1);x=x<=.0031308f?12.92f*x:1.055f*powf(x,1/2.4f)-.055f;o[k]=x*255+.5f;}fwrite(o,1,4,f);}fclose(f);}

@@ -8,7 +8,7 @@ const [from, to] = process.argv.slice(2);
 fs.mkdirSync(to, { recursive: true });
 const raw = (name) => fs.readFileSync(path.join(from, `${name}.raw`));
 const picture = (data, width, height) => sharp(data, { raw: { width, height, channels: 4 } });
-const save = (image, name, quality = 84) => image.webp({ quality, alphaQuality: 92, effort: 6 }).toFile(path.join(to, `${name}.webp`));
+const save = (image, name, quality = 84, alphaQuality = 92) => image.webp({ quality, alphaQuality, effort: 6 }).toFile(path.join(to, `${name}.webp`));
 
 // warmer (or brighter): each colour times a number
 const graded = (data, by) => {
@@ -18,43 +18,94 @@ const graded = (data, by) => {
 const LAMPLIGHT = [0.98, 0.935, 0.865]; // the paper, by lantern light
 const ROSES = [1.16, 1.14, 1.14]; // a little brighter
 
-// the box, a layer each
+// ── the box, a layer each ──
 const [W, H] = [900, 990];
-for (const [name, out] of [['back', 'box-back'], ['front', 'box-front'], ['lid', 'box-lid']]) await save(picture(graded(raw(name), LAMPLIGHT), W, H), out);
-// the silk, grey and brought up to full range: it's tinted in the browser
-for (const [name, out] of [['band', 'silk-band'], ['bow', 'silk-bow']]) {
-  const data = raw(name);
+for (const [name, out] of [['back', 'box-back'], ['front', 'box-front'], ['lid', 'box-lid'], ['lidopen', 'lid-open']]) {
+  const [w, h] = name === 'lidopen' ? [900, 900] : [W, H];
+  await save(picture(graded(raw(name), LAMPLIGHT), w, h), out);
+}
+
+// ── the silk, grey and brought up to full range: it's tinted in the browser ──
+const brightest = (() => {
+  const data = raw('silk');
   const seen = [];
   for (let i = 0; i < data.length; i += 4) if (data[i + 3] > 250) seen.push(data[i + 1]);
-  const top = seen.sort((a, b) => a - b)[Math.floor(seen.length * 0.97)];
-  for (let i = 0; i < data.length; i += 4) data.fill(Math.min(255, (data[i + 1] / top) * 255), i, i + 3);
-  await save(picture(data, W, H), out, 88);
-}
-// what a layer's shadow takes away: the render with it, against without
-for (const [lit, shaded, out] of [['lid', 'lids', 'lid-shade'], ['front', 'fronts', 'box-shade']]) {
-  const [a, b] = [raw(lit), raw(shaded)];
-  const shade = Buffer.alloc(a.length);
-  for (let i = 0; i < a.length; i += 4) {
-    const [x, y] = [a[i] + a[i + 1] + a[i + 2] + 8, b[i] + b[i + 1] + b[i + 2] + 8];
-    shade.set([36, 16, 24, b[i + 3] < 250 || a[i + 3] < 250 ? 0 : Math.max(0, Math.min(255, (1 - y / x) * 255 - 4))], i);
+  return seen.sort((a, b) => a - b)[Math.floor(seen.length * 0.995)];
+})();
+const silk = (name) => {
+  const data = raw(name);
+  for (let i = 0; i < data.length; i += 4) data.fill(Math.min(255, (data[i + 1] / brightest) * 255), i, i + 3);
+  return data;
+};
+await save(picture(silk('silk'), W, H), 'silk-tied', 86);
+await save(picture(silk('fallen'), 1260, 470), 'silk-fallen', 86);
+
+// ── shadows: what something takes away (a render with it, against without) ──
+const shadow = async (lit, shaded, w, h, { strength = 1, blur = 1.2, from = 4 } = {}) => {
+  const shade = Buffer.alloc(lit.length);
+  for (let i = 0; i < lit.length; i += 4) {
+    const [x, y] = [lit[i] + lit[i + 1] + lit[i + 2] + 8, shaded[i] + shaded[i + 1] + shaded[i + 2] + 8];
+    const off = shaded[i + 3] < 250 || lit[i + 3] < 250;
+    shade.set([36, 16, 24, off ? 0 : Math.max(0, Math.min(255, ((1 - y / x) * 255 - from) * strength))], i);
   }
-  // (the lid's shadow on the box stays once the ribbon has come off: so it has
-  // no dark strip where the ribbon lay)
-  if (out === 'box-shade') {
-    const band = raw('band');
-    let [x0, x1] = [W, 0];
-    for (let i = 0; i < band.length; i += 4) {
-      if (band[i + 3] === 0) continue;
-      const x = (i / 4) % W;
-      [x0, x1] = [Math.min(x0, x), Math.max(x1, x)];
-    }
-    for (let y = 0; y < H; y++) {
-      const beside = shade[(y * W + x0 - 10) * 4 + 3];
-      for (let x = x0 - 9; x < x1 + 10; x++) shade[(y * W + x) * 4 + 3] = beside;
-    }
+  return picture(shade, w, h).blur(blur).raw().toBuffer();
+};
+const over = (under, top) => {
+  for (let i = 0; i < under.length; i += 4) if (top[i + 3] > under[i + 3]) under.set(top.subarray(i, i + 4), i);
+  return under;
+};
+await save(picture(await shadow(raw('front'), raw('fronts'), W, H), W, H), 'box-shade', 70);
+// (nothing of it where `hides` is in front)
+const outside = (shade, hides) => {
+  for (let i = 3; i < shade.length; i += 4) if (hides[i] > 10) shade[i] = 0;
+  return shade;
+};
+await save(picture(over(outside(await shadow(raw('fronts'), raw('fronttied'), W, H), raw('lid')), await shadow(raw('lid'), raw('lids'), W, H)), W, H), 'tied-shade', 70);
+const FLOOR = { strength: 0.6, blur: 2.2, from: 8 };
+await save(picture(await shadow(raw('ground'), raw('floor0'), 336, 304, FLOOR), 336, 304), 'floor', 78);
+
+// ── films: each frame cut down to what's on it, all packed into one picture.
+// Where each is goes in films.js: [x, y, w, h in the picture, x, y in the frame] ──
+const films = {};
+async function film(out, frames, w, h, place, quality, alphaQuality) {
+  const ATLAS = 2400;
+  const cut = [];
+  for (const data of frames) {
+    let [x0, y0, x1, y1] = [w, h, 0, 0];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (data[(y * w + x) * 4 + 3] > 5) [x0, y0, x1, y1] = [Math.min(x0, x), Math.min(y0, y), Math.max(x1, x + 1), Math.max(y1, y + 1)];
+    if (x1 <= x0) [x0, y0, x1, y1] = [0, 0, 1, 1];
+    cut.push({ x: x0, y: y0, w: x1 - x0, h: y1 - y0, input: await picture(data, w, h).extract({ left: x0, top: y0, width: x1 - x0, height: y1 - y0 }).png().toBuffer() });
   }
-  await save(picture(await picture(shade, W, H).blur(1.4).raw().toBuffer(), W, H), out, 70);
+  let [ax, ay, row] = [0, 0, 0];
+  for (const one of cut) {
+    if (ax + one.w > ATLAS) [ax, ay, row] = [0, ay + row + 2, 0];
+    [one.ax, one.ay] = [ax, ay];
+    ax += one.w + 2;
+    row = Math.max(row, one.h);
+  }
+  await save(sharp({ create: { width: Math.max(...cut.map((one) => one.ax + one.w)), height: ay + row, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).composite(cut.map(({ input, ax: left, ay: top }) => ({ input, left, top }))), out, quality, alphaQuality);
+  films[out] = { place, scale: place[2] / w, frames: cut.map(({ ax: x, ay: y, w: fw, h: fh, x: dx, y: dy }) => [x, y, fw, fh, dx, dy]) };
 }
+const several = (count, make) => Promise.all(Array.from({ length: count }, (_, i) => make(i)));
+// (a film's place: x, y, w, h in the box's own px, where it's 300 × 330)
+await film('film-silk', await several(58, (i) => silk(`silk${i}`)), 672, 608, [-60, 0, 420, 380], 68, 70);
+await film('film-silk-shade', await several(58, async (i) => over(await shadow(raw('plain'), raw(`shade${i}`), 336, 304, { blur: 1.8, from: 9 }), outside(await shadow(raw('floor0'), raw(`floor${i}`), 336, 304, FLOOR), raw('plain')))), 336, 304, [-60, 0, 420, 380], 40, 72);
+await film('film-lid', await several(28, (i) => graded(raw(`lid${i}`), LAMPLIGHT)), 540, 640, [-18.75, -62.5, 337.5, 400], 78);
+await film('film-lid-shade', await several(28, (i) => shadow(raw('open'), raw(`lidshade${i}`), 240, 264, { blur: 1.8 })), 240, 264, [0, 0, 300, 330], 40, 80);
+const FILMS = path.join(process.env.PROJECT ?? process.cwd(), 'src/engine/blocks/giftbox/films.js');
+fs.writeFileSync(
+  FILMS,
+  `// The gift box opening: where each frame of its films is. Made by tools/presents/sheets.mjs.
+//   place  – where the film goes on the box, which is 300 × 330 (x, y, w, h)
+//   scale  – the box's px for each px of the picture
+//   frames – [x, y, w, h in the picture, x, y in the frame]
+export const FILMS = {
+${Object.entries(films)
+  .map(([name, { place, scale, frames }]) => `  '${name}': { place: ${JSON.stringify(place)}, scale: ${scale}, frames: ${JSON.stringify(frames)} },`)
+  .join('\n')}
+};
+`,
+);
 // the roses: one picture of those that stay, one of each that can be picked,
 // and where each of those goes (in rosesLayout.js, as parts of the whole)
 const [RW, RH] = [880, 726];

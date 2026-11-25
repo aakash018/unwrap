@@ -53,10 +53,20 @@ static Cam stem(){
 }
 // ── the gift box ── (L = which part a triangle belongs to, see LAYER in pt.cpp)
 extern int LAY;
+#include "ribbon.h"
 static F CREASE=1;
 static F q2(F u){return u*2*M_PI;}
 static void strip(const M4&M,std::function<V(F)>c,std::function<V(F)>side,std::function<F(F)>w,V col,int n=160){
   grid(n,10,M,[=](F u,F v){F s=v*2-1;V a=c(u),sd=norm(side(u));F cup=w(u)*.05f*sinf(s*4.2f+sinf(u*31)*1.1f)*sinf(u*M_PI)*CREASE;V tn=norm(c(fminf(1,u+.004f))-c(fmaxf(0,u-.004f)));return a+sd*(s*w(u))+cross(tn,sd)*cup;},[=](F,F){return col;},SILK);}
+// UNTIE: seconds since the ribbon was pulled. LIDQ: how far open the lid is
+static F UNTIE=0,LIDQ=0;
+// where the lid is as it opens: q from 0 (shut) to 1
+static M4 lidPose(F q,F ly,F lh,F ld){
+  if(q<=0)return M4();
+  // turned about the bottom of its back edge
+  F e=q;V hinge(0,ly,-ld);F lift=.40f*smooth(0,.4f,e)-.24f*smooth(.5f,1,e),tilt=-1.82f*(e<1?smooth(.06f,1,e):1+(e-1)*.9f),back=-.16f*smooth(.2f,.9f,e);
+  return mul(trans(hinge+V(0,lift,back)),mul(rotX(tilt),trans(-hinge)));
+}
 static Cam giftBox(){
   AMB_T=V(.20f,.18f,.24f);AMB_B=V(.14f,.09f,.08f);
   light(V(-.8f,.95f,.8f),24,V(5.6f,4.7f,3.9f));light(V(1,.4f,-.4f),16,V(4.2f,3.5f,5.6f));light(V(-1,.2f,-.5f),13,V(4.5f,3.0f,2.2f));light(V(.55f,.3f,1),22,V(.75f,.65f,.62f));
@@ -80,26 +90,36 @@ static Cam giftBox(){
   LAY=3; // the lid
   F lw=bw+.07f,ld=bd+.07f,lh=.46f,ly=bh-lh+.16f;
   {M4 Lm=trans(V(0,ly+lh*.5f,0));size_t s0=T.size();rbox(Lm,V(lw,lh*.5f,ld),.035f,paper,DIFF,[](V n){return n.y>-.7f;},false,90);
-   for(size_t i=s0;i<T.size();i++){Tri&q=T[i];V p[3]={q.a,q.a+q.e1,q.a+q.e2};for(int k=0;k<3;k++)q.c[k]=wood(p[k].x+p[k].z*.7f,p[k].y+p[k].z*.6f,9)*fall(p[k]);}}
+   for(size_t i=s0;i<T.size();i++){Tri&q=T[i];V p[3]={q.a,q.a+q.e1,q.a+q.e2};for(int k=0;k<3;k++)q.c[k]=wood(p[k].x+p[k].z*.7f,p[k].y+p[k].z*.6f,9)*fall(p[k]);}
+   // its inside, and the rim between
+   F th=.04f;rbox(mul(Lm,trans(V(0,-th*.5f,0))),V(lw-th,lh*.5f-th*.5f,ld-th),.03f,paper*.96f,DIFF,[](V n){return n.y>-.7f;},true,40);
+   for(int a=0;a<4;a++){F A=a%2?lw:ld,B2=a%2?ld:lw;M4 R4=mul(Lm,rotY(a*M_PI/2));grid(2,2,R4,[=](F u,F v){F d=A-th*v;return V((2*u-1)*(B2-th*v),-lh*.5f,d);},[=](F,F){return paper;},DIFF);}
+   M4 pose=lidPose(LIDQ,ly,lh,ld);for(size_t i=s0;i<T.size();i++){Tri&q=T[i];q.a=pose.p(q.a);q.e1=pose.d(q.e1);q.e2=pose.d(q.e2);for(auto&k:q.n)k=pose.d(k);}}
 
   F ty=ly+lh+.006f,rw=.17f;
-  CREASE=.12f;
-  LAY=4; // silk round the box
-  auto X=[](F){return V(1,0,0);};
-  strip(M4(),[=](F u){return V(0,u*(ly+.02f),bd+.012f);},[](F){return V(1,0,0);},[=](F){return rw;},silk);
-  LAY=5; // silk on the lid, and its bow
-  strip(M4(),[=](F u){return u<.22f?V(0,ly-.01f+(lh+.0f)*(u/.22f),ld+.014f):V(0,ty+.012f,ld-(u-.22f)/.78f*2*ld);},X,[=](F){return rw;},silk,300);
-  strip(M4(),[=](F u){return V(-lw+2*lw*u,ty+.016f,0);},[](F){return V(0,0,1);},[=](F){return rw;},silk);
-  CREASE=1.5f;V kn(0,ty+.17f,.06f);
-  // a loop: out from the knot and back, wide and soft, leaning back so its face shows
-  auto loop=[&](F dir,F a,F b,F rise,F lean,F yaw,F wd,F z0){M4 M=mul(trans(kn+V(0,0,z0)),mul(rotY(yaw),mul(rotX(lean),rotZ(dir*rise))));
-    strip(M,[=](F u){F q=2*M_PI*u;F x=dir*a*(1-cosf(q))*.5f;F y=b*sinf(q)*powf(sinf(M_PI*u),.55f);return V(x,y+.018f*sinf(u*23),.02f*sinf(u*17));},[=](F u){return V(dir*.16f*sinf(q2(u)),.30f*cosf(u*M_PI),1);},[=](F u){return wd*(.34f+.66f*powf(sinf(M_PI*u),.5f));},silk,240);};
-  loop(-1,1.0f,.36f,.30f,-.50f,.22f,.34f,.04f);loop(1,1.0f,.36f,.30f,-.50f,-.22f,.34f,.04f);
-  loop(-1,.74f,.30f,.86f,-.42f,.12f,.29f,-.12f);loop(1,.74f,.30f,.86f,-.42f,-.12f,.29f,-.12f);
-  auto tail=[&](F dir,F out,F dz){strip(M4(),[=](F u){F x=dir*(.08f+out*powf(u,.85f));F z=.16f+smooth(0,.56f,u)*(ld+.02f)+.05f*sinf(u*8)*u+dz;F y=kn.y-.02f-.10f*smooth(0,.3f,u);F over=smooth(.40f,.62f,u);y=y*(1-over)+(ty+.075f)*over;y-=.95f*powf(fmaxf(0,u-.55f),1.35f);z+=.10f*smooth(.5f,.7f,u);return V(x,y,z);},[=](F u){return V(1,.25f*dir,-.25f*dir*sinf(u*6));},[=](F u){return .165f*(.55f+.45f*u)*(u>.93f?1-(u-.93f)*1.2f:1);},silk,180);};
-  tail(-1,.62f,0);tail(1,.70f,.015f);
+  V kn(0,ty+.17f,.06f);
+  // ── the silk ── all of it, as it is UNTIE seconds after it's undone (ribbon.h)
+  F un=UNTIE;Silk sk;sk.boxes={{V(-bw,0,-bd),V(bw,bh,bd)},{V(-lw,ly,-ld),V(lw,ty,ld)}};
+  auto X=[](F){return V(1,0,0);};auto Z=[](F){return V(0,0,1);};
+  // a length from the knot, over the lid's edge and down to the ground: out = how far to the edges of lid and box
+  auto arm=[=](F u,F lidOut,F boxOut,F up){F L1=lidOut,L2=lh+.02f,L3=ly,tot=L1+L2+L3,d=u*tot;if(d<L1)return V(0,ty+up,d);d-=L1;if(d<L2)return V(0,ty+up-d,lidOut+.014f);d-=L2;return V(0,ly-.01f-d*(ly-.012f)/L3,mix(V(lidOut+.014f),V(boxOut+.012f),smooth(0,.05f,d)).x);};
+  auto wide=[=](F){return rw;};
+  sk.add([=](F u){return arm(u,ld,bd,.012f);},X,wide,.12f,5,46,320,.012f,0,0,.50f,.50f);
+  sk.add([=](F u){V p=arm(u,ld,bd,.012f);return V(0,p.y,-p.z);},X,wide,.12f,5,46,200,.012f,0,2,.56f,.56f);
+  sk.add([=](F u){V p=arm(u,lw,bw,.016f);return V(-p.z,p.y,0);},Z,wide,.12f,5,46,240,.018f,0,-1,.53f,.53f);
+  sk.add([=](F u){V p=arm(u,lw,bw,.016f);return V(p.z,p.y,0);},Z,wide,.12f,5,46,240,.018f,0,1,.60f,.60f);
+  auto tail=[&](F dir,F out,F dz,F rel){sk.add([=](F u){F x=dir*(.08f+out*powf(u,.85f));F z=.16f+smooth(0,.56f,u)*(ld+.02f)+.05f*sinf(u*8)*u+dz;F y=kn.y-.02f-.10f*smooth(0,.3f,u);F over=smooth(.40f,.62f,u);y=y*(1-over)+(ty+.075f)*over;y-=.95f*powf(fmaxf(0,u-.55f),1.35f);z+=.10f*smooth(.5f,.7f,u);return V(x,y,z);},[=](F u){return V(1,.25f*dir,-.25f*dir*sinf(u*6));},[=](F u){return .165f*(.55f+.45f*u)*(u>.93f?1-(u-.93f)*1.2f:1);},1.5f,5,40,180,.03f,1,dir,.02f,rel);};
+  tail(-1,.62f,0,.58f);tail(1,.70f,.015f,.62f);
+  sk.run(un);sk.draw(silk);
+  LAY=5;CREASE=1.5f;
+  // a loop: out from the knot and back, wide and soft, leaning back so its face shows; it's drawn through the knot
+  auto loop=[&](F dir,F a,F b,F rise,F lean,F yaw,F wd,F z0,F from,F to){F k=1-smooth(from,to,un);if(k<.05f)return;F sag=1-k;a*=k;b*=powf(k,.75f);wd*=.45f+.55f*k;rise*=1-.5f*sag;M4 M=mul(trans(kn+V(0,-.05f*sag,0)+V(0,0,z0)),mul(rotY(yaw),mul(rotX(lean),rotZ(dir*rise))));
+    strip(M,[=](F u){F q=2*M_PI*u;F x=dir*a*(1-cosf(q))*.5f;F y=b*sinf(q)*powf(sinf(M_PI*u),.55f);return V(x,y+.018f*sinf(u*23+sag*9),.02f*sinf(u*17+sag*7));},[=](F u){return V(dir*.16f*sinf(q2(u)),.30f*cosf(u*M_PI),1);},[=](F u){return wd*(.34f+.66f*powf(sinf(M_PI*u),.5f));},silk,240);};
+  loop(-1,1.0f,.36f,.30f,-.50f,.22f,.34f,.04f,.10f,.56f);loop(1,1.0f,.36f,.30f,-.50f,-.22f,.34f,.04f,.06f,.52f);
+  loop(-1,.74f,.30f,.86f,-.42f,.12f,.29f,-.12f,.0f,.44f);loop(1,.74f,.30f,.86f,-.42f,-.12f,.29f,-.12f,.04f,.47f);
   // the knot
-  grid(60,40,trans(kn+V(0,0,.05f)),[=](F u,F v){F a=u*2*M_PI,b=(v-.5f)*M_PI;F k=1+.06f*sinf(a*5+v*9);return V(.15f*k*cosf(b)*cosf(a),.175f*sinf(b)+.0f,.15f*k*cosf(b)*sinf(a));},[=](F,F){return silk;},SILK);
+  {F k=1-.25f*smooth(.2f,.5f,un);F off=smooth(.50f,.62f,un);if(off<1)grid(60,40,trans(kn+V(0,-.12f*off,.05f)),[=](F u,F v){F a=u*2*M_PI,b=(v-.5f)*M_PI;F j=(1+.06f*sinf(a*5+v*9))*k*(1-.8f*off);return V(.15f*j*cosf(b)*cosf(a),.175f*j*(1-.6f*off)*sinf(b)+.0f,.15f*j*cosf(b)*sinf(a));},[=](F,F){return silk;},SILK);}
+  LAY=6;grid(2,2,M4(),[=](F u,F v){return V(-9+18*u,-.004f,9-18*v);},[=](F,F){return V(.5f);},DIFF);// the ground, only for the shadows on it
   return{V(0,3.55f,11.2f),V(0,1.36f,0),18.6f,1.12f};
 }
 // ── a fallen petal ──
@@ -186,4 +206,4 @@ static Cam kite(F fold){
   if(fold<.02f){crease(top,bot);crease(lf,rt);crease(top,fl);crease(top,fr);crease(bot,V(-m,R-m,0));crease(bot,V(m,R-m,0));}
   return{V(-1.0f,-.9f,9),V(0,0,0),22.5f,1.0f};
 }
-static Cam scene(const char*n,F turn,F lid){int k=(int)lroundf(turn*180/M_PI);if(!strcmp(n,"box"))return giftBox();if(!strcmp(n,"stem"))return stem();if(!strcmp(n,"petal"))return petal(turn*180/M_PI);if(!strcmp(n,"wing"))return wing(k);if(!strcmp(n,"wingbody"))return wingBody();if(!strcmp(n,"bed"))return bed();if(!strcmp(n,"crane"))return crane(lid);if(!strcmp(n,"kite"))return kite(lid);return roses(turn);}
+static Cam scene(const char*n,F turn,F lid){int k=(int)lroundf(turn*180/M_PI);if(!strcmp(n,"box")){UNTIE=k/100.f;LIDQ=lid*180/M_PI/100;return giftBox();}if(!strcmp(n,"stem"))return stem();if(!strcmp(n,"petal"))return petal(turn*180/M_PI);if(!strcmp(n,"wing"))return wing(k);if(!strcmp(n,"wingbody"))return wingBody();if(!strcmp(n,"bed"))return bed();if(!strcmp(n,"crane"))return crane(lid);if(!strcmp(n,"kite"))return kite(lid);return roses(turn);}

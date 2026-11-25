@@ -19,16 +19,6 @@ export function sampleInvitations(now: string): Invitation[] {
     },
     {
       kind: "invitation",
-      id: "rita-bikash",
-      title: "Rita & Bikash",
-      template: "hindu-wedding",
-      status: "draft",
-      edited: now,
-      eventDay: addDays(now, 64),
-      sample: true,
-    },
-    {
-      kind: "invitation",
       id: "anita-prakash",
       title: "Anita & Prakash",
       template: "hindu-wedding",
@@ -43,6 +33,15 @@ export function sampleInvitations(now: string): Invitation[] {
 
 export function sampleGifts(now: string): Gift[] {
   return [
-    { kind: "gift", id: "for-maya", title: "For Maya", theme: "love", toName: "Maya", status: "draft", edited: addDays(now, -9), sample: true },
+    {
+      kind: "gift",
+      id: "for-soni",
+      title: "For Soni",
+      theme: "love",
+      toName: "Soni",
+      status: "draft",
+      edited: addDays(now, -9),
+      sample: true,
+    },
   ];
 }
