@@ -1,0 +1,22 @@
+/* The only CSS file. Everything else is Tailwind classes in the components. */
+@import "tailwindcss";
+
+/* Brand colours and fonts, the same as the gift engine's. Each one becomes
+   Tailwind classes: --color-ink → text-ink, bg-ink, border-ink … */
+@theme inline {
+  --font-sans: var(--font-dm-sans), system-ui, sans-serif;
+  --font-display: var(--font-instrument), Georgia, serif;
+  --font-dev: var(--font-tiro), serif; /* Nepali */
+
+  --color-ink: #1e1b18;
+  --color-ink-soft: #6b645c;
+  --color-line: #e6e2dc;
+  --color-paper: #fffdf8;
+  --color-accent: #b4432f;
+  --color-cocoa: #3b1a17;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
