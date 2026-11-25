@@ -11,7 +11,7 @@ export default function GoogleButton({ disabled = false }: { disabled?: boolean 
     <button
       type="submit"
       disabled={disabled || pending}
-      className="flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-full border border-line bg-white text-[15px] font-medium text-ink transition-colors hover:border-ink/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-60"
+      className="flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-lg border border-line bg-white text-[15px] font-medium text-ink transition-colors hover:border-ink/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine disabled:cursor-not-allowed disabled:opacity-60"
     >
       <GoogleLogo />
       {pending ? "Opening Google…" : "Continue with Google"}

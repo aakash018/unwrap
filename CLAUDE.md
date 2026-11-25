@@ -13,7 +13,102 @@ Read `README.md` for setup and the folder map.
   proxy.ts is only the quick check.
 - **Return addresses** always go through `safePath()`.
 - **Port 4321**, because 3000 and 3100 are used by other things on this Mac.
-- **The engine** is in `../enginev1` (its CLAUDE.md has the founder's taste).
+- **Invitations and gifts are separate things** (founder, 25 Nov 2026:
+  "templates and themes are different"). An **invitation** is made from a
+  template (`garden-wedding`, `hindu-wedding`) and has only its chapters. A
+  **gift** is made by the sender on a theme (`love`, `marigold`, `birthday`,
+  `anniversary`, `plain`), with basics and surprises. Never mix them: an
+  invitation has no theme and no surprises ("No, gifts only"); a gift has no
+  template, chapters, guests or RSVP. Names and addresses: `lib/projects.ts`.
+- **Three ways to start a gift** (founder, 25 Nov 2026): a ready-made one
+  (surprises and words in place, then changed freely), a theme, or plain.
+  Ready-made gifts are in `engine/ready-made`; names for people in
+  `lib/projects.ts` (READY_MADE). Once started it's a gift like any other: which
+  one it came from isn't saved. "Template" stays the word for invitations. Two so
+  far: Love, "A sky for you", and Birthday, "A garden for you" (for anyone, not
+  only a partner). Both are sweet and a little funny, with Nepali accents, and
+  easter eggs that lead to each other.
+- **Easter eggs:** the Hidden message block (`blocks/secret`) is a tiny star;
+  finding all of them on a page fires `unwrap:celebrate`, which ThemeLayer hands
+  to the theme (`scene.celebrate`, else a few bursts). Love's own: the moon, and
+  the rooftops. Birthday's own: the branches (flowers fall), the presents on the
+  grass (a balloon comes out) and the cake (its candles go out).
+- **Each surprise has its own job** (founder, 25 Nov 2026: "gift box and letter
+  have the same use case"). Letter = long words. Gift box = a present to unwrap,
+  never words: roses, butterflies, a paper crane or a framed photo (`blocks/giftbox/presents.js`;
+  the founder turned down momo, a teddy bear, a music box and a ring). Scratch card =
+  a promise or prize. Sticky note = flip. Hidden message = find.
+- **Presents are rendered, not drawn** (25 Nov 2026: the drawn roses and a ring
+  "look so cheap" beside the themes). The box, roses, petals, butterflies' wings and crane are 3D
+  models path-traced by `tools/presents` (its own small renderer, C++) into
+  `public/presents`; run `bash tools/presents/bake.sh` after changing a model.
+  Every rose in front is its own picture on a spring, to brush, tap and pick
+  (Roses.jsx; the founder didn't want them to turn). Butterflies and the crane
+  leave the box: they live on a sheet over the page (`pageLayer.js`), moved
+  directly, not by React, and are put away when the box closes. The silk is rendered grey and
+  tinted the sender's colour in the browser. Anything else meant to look like a
+  real thing should be made this way, never as flat SVG.
+- **Reading:** letters and hidden messages open in `blocks/shared/Reader.jsx`
+  (a portal on the body). Receivers don't see a voice note with no recording.
+- **Saved shape** (format 1, `engine/page/format.js`): content, never layout.
+  - invitation `{ format, kind, template, chapters: [{ id, type, props }] }`
+  - gift `{ format, kind, theme, background, elements: [{ id, type, frame, frames?, props }] }`
+  - Every ceremony has its own `id` (RSVP will need it). Photos are still
+    data URLs until there's Storage.
+  - Old drafts (`page`) are upgraded by `upToDate` in `lib/drafts.ts`; an old
+    invitation's extra elements are dropped.
+- **The engine** is in `src/engine`, JavaScript, moved from `../enginev1` on
+  25 Nov 2026 (that folder is frozen; its CLAUDE.md has the founder's taste
+  and how every scene was built). Keep it JavaScript. It has its own root
+  layouts and CSS (`app/(open)`, `app/(editor)`, `engine/index.css`), because
+  it uses the same Tailwind names as the site for different fonts and colours.
+  - The server can't import blocks (`Path2D` at load). `page/format.js` and
+    `page/info.js` are safe anywhere.
+  - Guests must not load editor code: settings panels are only in
+    `blocks/settings.js`. At phone size `/i/demo` is ~200 KB of JS and
+    ~106 MB of canvas (2x screen), 120 fps on a Mac. The founder found the
+    engine's Netlify version fine on a Nothing Phone (3a), a mid-range
+    Android (25 Nov 2026); Unwrap's copy, iPhones and cheaper phones untried.
+    Test phones through a hosted address, not over Wi-Fi.
+  - New ids come from `utils/newId.js` (crypto.randomUUID is missing on http).
+  - ESLint has lighter rules there, but `no-undef` is an error.
+- **Editor:** private, computers only. `engine/Editor.jsx` loads and saves
+  nothing itself; `components/editor/Edit.tsx` gives it a page and saves every
+  change half a second later. Drafts are in the browser (IndexedDB, per
+  account) until they move to Supabase. A draft that can't be READ is never
+  replaced by a fresh page. Two tabs editing one draft overwrite each other
+  (last one wins); the preview passes over pages older than the saved draft. Removing a chapter asks first; putting it back restores
+  its place and its first words. Text typed on the page keeps its letters
+  (`readText` in EditableText).
+- **Screens:** an invitation fills a wide screen, its words in the 430 px column
+  in the middle. A **gift has three layouts** (founder, 25 Nov 2026: "so that
+  everything is not in middle"): phone, tablet (640) and desktop (1200), in
+  `page/layouts.js`. `frame` is the phone's place, `frames.tablet/desktop` the
+  others; where there's none, `arrange` works one out from the phone's. Moving
+  anything in a wide layout gives everything its own place there (`settle` in
+  the reducer). Words and settings are shared; only place, size of words and
+  alignment differ. The editor passes `shown` (blocks placed for the chosen
+  device) to the canvas and panels, and adds `layout` to UPDATE_FRAME/ADD_BLOCK.
+  Ready-made gifts place everything by hand in all three. A gift's theme is
+  drawn as wide as the page, so decorations are placed from `world.width`.
+- **Themes made of scenes:** Love (a night of lanterns; "looks really good"),
+  Birthday (a party under the jacarandas) and Anniversary (lamps on Phewa Lake)
+  have a top scene, a calm middle and an ending, each a real place at one time
+  of day with its own colours (plum, lilac, teal). The founder picks the scene
+  from a few ideas (25 Nov 2026). Marigold is still the older, flat kind. If a
+  theme's text colours change, list the old ones in its `oldInks`. Light painted
+  on a half-clear canvas goes dull when printed on paper: paint it afterwards,
+  underneath (`destination-over`), as `afterglow` and `lowSun` do.
+- **Theme layer:** the live canvas is only as tall as the screen and follows the
+  scroll (`ThemeLayer.jsx`): whole-page
+  drawing every frame isn't possible there. Swiping scrolls; tapping bursts.
+- **Home (`/home`)** is two plain lists, your drafts first, then the samples
+  (`lib/samples.ts`; `/home?sample=empty` hides them). Buttons without a
+  feature use `NotYetButton`, which says so.
+- **Look** (founder, 25 Nov 2026: the first dashboard was "very very bad", the
+  second "childish and trash", to come back to later): white page, plain
+  lists, Hanken Grotesk only, ink with one accent (`wine`) and `leaf` for
+  live. No beige, cards, badges, boxes in boxes or sidebar.
 - **Planned:** save drafts, photo uploads, publish with an activation code,
   guest links and RSVP. No payment gateway. Database writes go through the
   server only.

@@ -4,6 +4,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { readEnv } from "@/lib/env";
 import { safePath } from "@/lib/safe-path";
+import { isOutage } from "@/lib/supabase/outage";
 import { createSupabase } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
@@ -24,10 +25,11 @@ export async function GET(request: NextRequest) {
   if (!code) return goTo("/login?error=failed");
 
   const supabase = await createSupabase();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const flowId = params.get("sb_flow_id"); // which tab's sign-in this is
+  const { error } = await supabase.auth.exchangeCodeForSession(code, flowId ? { flowId } : undefined);
   if (error) {
     console.error("Google sign-in failed:", error.message);
-    return goTo("/login?error=failed");
+    return goTo(isOutage(error) ? "/login?error=down" : "/login?error=failed");
   }
   return goTo(safePath(params.get("next")));
 }

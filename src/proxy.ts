@@ -6,6 +6,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { readEnv } from "@/lib/env";
 import { refreshSession } from "@/lib/supabase/refresh-session";
 
+const PRIVATE = /^\/(home|invitations|gifts)(\/|$)/;
+
 export async function proxy(request: NextRequest) {
   const env = readEnv();
   if (!env) return NextResponse.next();
@@ -13,7 +15,7 @@ export async function proxy(request: NextRequest) {
   const { response, signedIn } = await refreshSession(request, env);
   const { pathname, search } = request.nextUrl;
 
-  if (pathname.startsWith("/gifts") && !signedIn) {
+  if (PRIVATE.test(pathname) && signedIn === "no") {
     const login = new URL("/login", env.siteUrl);
     login.searchParams.set("next", pathname + search);
     const redirect = NextResponse.redirect(login);
@@ -24,5 +26,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/gifts/:path*"],
+  matcher: ["/", "/login", "/home", "/invitations/:path*", "/gifts/:path*"],
 };

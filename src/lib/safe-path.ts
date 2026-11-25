@@ -2,15 +2,18 @@
 // allowed, so a link like /login?next=https://evil.com can't send people
 // somewhere else.
 
-const HOME = "/gifts";
+const HOME = "/home";
+const LONGEST = 500;
+const NOT_AFTER_SIGN_IN = ["/login", "/auth"]; // would only send people round in circles
 const BASE = "http://unwrap.invalid"; // only used to read the path
 
 export function safePath(path: unknown): string {
-  if (typeof path !== "string" || !path.startsWith("/")) return HOME;
+  if (typeof path !== "string" || !path.startsWith("/") || path.length > LONGEST) return HOME;
   try {
     const url = new URL(path, BASE);
     // "//evil.com" also means another site, and "/.//evil.com" turns into it
     if (url.origin !== BASE || url.pathname.startsWith("//")) return HOME;
+    if (NOT_AFTER_SIGN_IN.some((p) => url.pathname === p || url.pathname.startsWith(`${p}/`))) return HOME;
     return url.pathname + url.search;
   } catch {
     return HOME;

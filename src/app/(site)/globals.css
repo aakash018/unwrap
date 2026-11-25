@@ -1,0 +1,22 @@
+/* The site's styles (everything but what people make, which has its own:
+   engine/index.css). The rest is Tailwind classes in the components. */
+@import "tailwindcss";
+@source not "../../engine";
+
+/* Colours and the font. Each one becomes Tailwind classes:
+   --color-soft → text-soft, bg-soft, border-soft … */
+@theme inline {
+  --font-sans: var(--font-hanken), system-ui, sans-serif;
+
+  --color-ink: #17181a; /* words, and the main buttons */
+  --color-soft: #66686c; /* quieter words */
+  --color-line: #e7e7e8;
+  --color-hover: #f6f6f6;
+  --color-wine: #6a1a2b; /* only for what's in focus, and for mistakes */
+  --color-leaf: #2f6b4f; /* live */
+}
+
+body {
+  background: white;
+  color: var(--color-ink);
+}
