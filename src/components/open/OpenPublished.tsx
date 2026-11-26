@@ -19,7 +19,11 @@ export default function OpenPublished({ saved, lines }: { saved: Saved; lines: s
   const isGift = saved.kind === "gift";
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    if (isGift) return;
+    // a gift: its code starts downloading now (its loader builds it once the bow is drawn)
+    if (isGift) {
+      import("@/engine/page/Viewer");
+      return;
+    }
     let gone = false;
     const fonts = Promise.race([document.fonts.ready, new Promise((done) => setTimeout(done, 3000))]);
     Promise.all([import("@/engine/page/Viewer"), fonts]).then(() => !gone && setReady(true));

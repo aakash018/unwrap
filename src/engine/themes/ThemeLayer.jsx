@@ -30,7 +30,7 @@ import { World } from './physics';
 import { THEMES } from './index';
 import { prepareFast } from './draw';
 import { PAGE_HEIGHT } from '../config';
-import { holdOpen } from '../page/ready';
+import { holdOpen, whenQuiet } from '../page/ready';
 
 const STEP = 1 / 60; // physics runs at a fixed 60 steps per second
 const MAX_PIXELS = 8_000_000; // cap canvas sizes so long pages stay fast
@@ -111,8 +111,12 @@ export default function ThemeLayer({ themeId, width, height, zoom = 1, screenHei
     // (a gift's loader waits until they're painted)
     let painted;
     holdOpen(new Promise((resolve) => (painted = resolve)));
-    let timer = setTimeout(() => paintStills(), 120);
+    // (not while a gift's loader is drawing its bow: ready.js)
+    let gone = false;
+    let timer;
+    whenQuiet().then(() => !gone && (timer = setTimeout(() => paintStills(), 120)));
     return () => {
+      gone = true;
       clearTimeout(timer);
       painted(); // (or given up: a new painting starts)
     };

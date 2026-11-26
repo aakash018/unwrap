@@ -221,17 +221,18 @@
 .gift-loader-bow { position: relative; width: 190px; overflow: visible; margin-bottom: 30px; }
 .gift-loader-bow path, .gift-loader-bow ellipse { fill: none; stroke: url(#gift-loader-foil); stroke-width: 1.15; stroke-linecap: round; stroke-dasharray: 1 1; stroke-dashoffset: 1; }
 .gift-loader-bow .draw { animation: gift-loader-draw 1.9s cubic-bezier(0.55, 0.05, 0.25, 1) forwards; }
-.gift-loader-bow .d1 { animation-delay: 0.1s } .gift-loader-bow .d2 { animation-delay: 0.35s } .gift-loader-bow .d3 { animation-delay: 0.9s } .gift-loader-bow .d4 { animation-delay: 1.05s }
-.gift-loader-bow .d5 { animation-delay: 1.4s; animation-duration: 0.7s }
+/* (it starts a moment in: after the page's code has started up, which would make it stutter) */
+.gift-loader-bow .d1 { animation-delay: 0.45s } .gift-loader-bow .d2 { animation-delay: 0.7s } .gift-loader-bow .d3 { animation-delay: 1.25s } .gift-loader-bow .d4 { animation-delay: 1.4s }
+.gift-loader-bow .d5 { animation-delay: 1.75s; animation-duration: 0.7s }
 .gift-loader-bow .fold { stroke-width: 0.7; opacity: 0.55 }
-.gift-loader-bow .glint { stroke: #fff3d6; stroke-width: 1.4; stroke-dasharray: 0.06 0.94; stroke-dashoffset: 0; opacity: 0; animation: gift-loader-glint 3.2s linear 2.2s infinite; }
+.gift-loader-bow .glint { stroke: #fff3d6; stroke-width: 1.4; stroke-dasharray: 0.06 0.94; stroke-dashoffset: 0; opacity: 0; animation: gift-loader-glint 3.2s linear 2.55s infinite; }
 .is-leaving .gift-loader-bow .draw { animation: gift-loader-undraw 0.9s cubic-bezier(0.6, 0, 0.8, 0.4) forwards; }
 .is-leaving .gift-loader-bow .glint { display: none }
 @keyframes gift-loader-draw { to { stroke-dashoffset: 0 } }
 @keyframes gift-loader-undraw { from { stroke-dashoffset: 0 } to { stroke-dashoffset: -1 } }
 @keyframes gift-loader-glint { 0% { stroke-dashoffset: 0.06; opacity: 0 } 10% { opacity: 1 } 70% { opacity: 1 } 100% { stroke-dashoffset: -1; opacity: 0 } }
 
-.gift-loader-words { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 100%; opacity: 0; animation: gift-loader-rise 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) 0.9s forwards; }
+.gift-loader-words { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 100%; opacity: 0; animation: gift-loader-rise 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) 1.25s forwards; }
 .is-leaving .gift-loader-words, .is-leaving .gift-loader-mark { animation: gift-loader-leave 0.9s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
 @keyframes gift-loader-rise { from { opacity: 0; transform: translateY(10px); filter: blur(4px) } to { opacity: 1; transform: none; filter: none } }
 @keyframes gift-loader-leave { from { opacity: 1 } to { opacity: 0; transform: translateY(-14px); filter: blur(3px) } }
@@ -242,5 +243,5 @@
 .gift-loader-progress i { position: absolute; inset: 0; transform-origin: left; transform: scaleX(var(--p, 0)); background: linear-gradient(90deg, #c99a4b, #f3d79c); transition: transform 0.5s ease-out; }
 .is-leaving .gift-loader-progress { opacity: 0; transition: opacity 0.4s; }
 /* the maker's mark, small and quiet at the bottom: the site's own logo, then कोसेली */
-.gift-loader-mark { position: absolute; bottom: calc(34px + env(safe-area-inset-bottom)); display: flex; align-items: baseline; gap: 7px; color: rgba(214, 170, 96, 0.78); font-family: var(--font-dev); font-size: 14px; opacity: 0; animation: gift-loader-rise 1s ease-out 1s forwards; }
+.gift-loader-mark { position: absolute; bottom: calc(34px + env(safe-area-inset-bottom)); display: flex; align-items: baseline; gap: 7px; color: rgba(214, 170, 96, 0.78); font-family: var(--font-dev); font-size: 14px; opacity: 0; animation: gift-loader-rise 1s ease-out 1.35s forwards; }
 .gift-loader-mark .logo { font-family: var(--f6), sans-serif; font-weight: 600; font-size: 15px; letter-spacing: -0.04em; }

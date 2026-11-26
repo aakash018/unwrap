@@ -17,7 +17,7 @@ import { AREA } from './area';
 import { loadFilms } from './film';
 import { createOpening } from './opening';
 import { burst, preparePetals } from './burst';
-import { holdOpen } from '../../page/ready';
+import { holdOpen, whenQuiet } from '../../page/ready';
 import { calm } from './pageLayer';
 
 const STEPS = ['tap the ribbon', 'once more · खोल त!'];
@@ -76,7 +76,7 @@ export default function GiftBoxBlock({ props }) {
       return img.decode();
     };
     holdOpen(loadFilms());
-    holdOpen(preparePetals(props.petals));
+    holdOpen(whenQuiet().then(() => preparePetals(props.petals))); // (drawing: after the loader's bow)
     for (const name of [...BOX_PICTURES, ...pictures, 'petal-0', 'petal-1', 'petal-2']) holdOpen(ready(name));
   }, [pictures, props.petals]);
 

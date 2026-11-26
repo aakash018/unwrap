@@ -122,7 +122,12 @@ Read `README.md` for setup and the folder map.
   box's pictures, films and petals. It always stays at least 4 s after the
   link was opened (founder, 26 Nov 2026: "no matter what"), then until all are
   done; something that fails counts as done, and only something stuck opens it
-  at 20 s anyway; a box tapped before its films are here wiggles until they are. The
+  at 20 s anyway. While the bow draws (to 2.65 s, `DRAWN`) nothing heavy runs:
+  its drawing is a main-thread animation and stuttered on first open (founder,
+  26 Nov 2026). So the gift is only built then (`built` in Loader; its code
+  still downloads from the start, Open.tsx), and the theme's stills and the
+  box's petals wait for `whenQuiet()` (ready.js); the bow starts at 0.45 s,
+  after the page's own code has started. A box tapped before its films are here wiggles until they are. The
   bow comes undone, the words drift up, the gift shows through. The name and
   words are saved with the gift (`opening: { name, words }`), set in the editor's
   "Opening" section with one-tap suggestions; the editor's Preview shows the

@@ -18,7 +18,11 @@ export default function Open({ demo }: { demo: Demo }) {
   // an invitation: keep the first words until the engine and its fonts have loaded
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    if (!template) return;
+    // a gift: its code starts downloading now (its loader builds it once the bow is drawn)
+    if (!template) {
+      import("@/engine/Demo");
+      return;
+    }
     let gone = false;
     const fonts = Promise.race([document.fonts.ready, new Promise((done) => setTimeout(done, 3000))]);
     Promise.all([import("@/engine/Demo"), fonts]).then(() => !gone && setReady(true));

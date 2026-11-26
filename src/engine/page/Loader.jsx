@@ -6,7 +6,9 @@
 //   <Loader theme name words>{the gift}</Loader>
 //
 // It's plain markup and CSS (index.css: .gift-loader), so it's on the screen
-// before any code has loaded. It always stays at least SHORTEST (founder,
+// before any code has loaded. The gift itself is only built once the bow has
+// been drawn (DRAWN): building it while the bow draws made the drawing
+// stutter (its code still downloads from the start: Open.tsx). It always stays at least SHORTEST (founder,
 // 26 Nov 2026: "at least 4 s no matter what"), then for as long as the gift
 // is still loading. Something that fails counts as done (ready.js); only
 // something that never finishes at all (a stuck connection) hits CAP, and
@@ -14,11 +16,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { watchReady, holdOpen } from './ready';
+import { watchReady, holdOpen, keepQuiet, whenQuiet } from './ready';
 
 const SHORTEST = 4000; // ms after the link was opened: always at least this
 const CAP = 20000; // ms after the link was opened: only for something stuck
 const LEAVING = 1300; // ms: the bow coming undone
+// ms after the link was opened: the bow drawn and the words in (index.css). The
+// heavy painting behind waits until then, or the drawing stutters (ready.js).
+const DRAWN = 2650;
 
 // The words above the name, unless the sender wrote their own.
 export const OPENING_WORDS = 'मायाको कोसेली, हजुरको लागि';
@@ -36,6 +41,16 @@ const SHADES = {
 export default function Loader({ theme, name, words, children }) {
   const [progress, setProgress] = useState(0);
   const [state, setState] = useState('loading'); // 'loading', 'leaving' or 'gone'
+  // (said while drawing, before the gift's own code starts its work)
+  useState(() => keepQuiet(DRAWN));
+  const [built, setBuilt] = useState(false); // the gift, behind
+  useEffect(() => {
+    let gone = false;
+    whenQuiet().then(() => !gone && setBuilt(true));
+    return () => {
+      gone = true;
+    };
+  }, []);
 
   useEffect(() => {
     let ready = false;
@@ -73,7 +88,7 @@ export default function Loader({ theme, name, words, children }) {
 
   return (
     <>
-      {children}
+      {built && children}
       {state !== 'gone' && (
         <div className={`gift-loader ${state === 'leaving' ? 'is-leaving' : ''}`} style={{ '--deep': deep, '--mid': mid, '--p': progress }} role="status" aria-label="Opening your gift">
           <svg className="gift-loader-bow" viewBox="-100 -60 200 150" aria-hidden="true">
