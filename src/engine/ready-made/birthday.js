@@ -4,7 +4,10 @@
 // Down the page: a birthday hello under the jacarandas, butterflies in a gift
 // box, three reasons, a year in photos, a letter, a song, a coupon to scratch,
 // and a wish over the cake (its candles can be blown out: see
-// themes/birthday.js). Three hidden messages lead from one easter egg to the next.
+// themes/birthday.js). Three hidden messages lead to the easter eggs, each
+// near where it's found: the bunting that spells their name and the bulbs that
+// play a song (at the top), the dandelion wish (in the grass at the end), and
+// the cake; finding them all, the garden plays the whole song.
 
 const SOFT = '#5A4070';
 const INK = '#3D2457';
@@ -100,8 +103,8 @@ ${from || 'me'}`,
 
     // ── hidden (the last one, on the grass, is also where the page ends: so the
     // garden comes below all the rest) ──
-    secret('You found one!\n\nNow tap the branches, up there where the flowers are.', [352, 268, 44], [560, 320, 44], [1010, 470, 48]),
-    secret('You don’t look a day older.\n\nI checked.', [382, 3140, 44], [590, 2060, 44], [18, 1620, 48]),
-    secret('The last one’s on the grass: tap the presents by the table.\n\nAnd save me a slice.', [192, 4596, 44], [300, 4396, 44], [576, 4020, 48]),
+    secret('You found one!\n\nTap a flag up there: it has something to tell you. Then tap the lights, one by one. They know a song.', [352, 268, 44], [560, 320, 44], [1010, 470, 48]),
+    secret('You don’t look a day older. I checked.\n\nDown by the cake there’s a wish hiding in the grass. Find it, and blow.', [382, 3140, 44], [590, 2060, 44], [18, 1620, 48]),
+    secret('The last one: blow out the candles. And save me a slice.', [192, 4596, 44], [300, 4396, 44], [576, 4020, 48]),
   ];
 }

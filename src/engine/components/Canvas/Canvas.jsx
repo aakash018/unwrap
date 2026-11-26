@@ -98,7 +98,7 @@ export default function Canvas({ page, dispatch, apiRef, device, onDevice }) {
               zoom,
             }}
           >
-            <ThemeLayer themeId={page.theme} width={pageWidth} height={pageHeight} zoom={zoom} screenHeight={screen.screenHeight} />
+            <ThemeLayer themeId={page.theme} width={pageWidth} height={pageHeight} zoom={zoom} screenHeight={screen.screenHeight} name={page.opening?.name} />
 
             {page.blocks.length === 0 && (
               <div

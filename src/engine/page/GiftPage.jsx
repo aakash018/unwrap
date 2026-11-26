@@ -46,6 +46,7 @@ export default function GiftPage({ page, zoom = 1, screenHeight = PAGE_HEIGHT, w
         height={height}
         zoom={zoom}
         screenHeight={screenHeight}
+        name={page.opening?.name}
       />
       {/* story sections pin to one screen of this device, and fill its width */}
       <StageContext.Provider value={screenHeight}>

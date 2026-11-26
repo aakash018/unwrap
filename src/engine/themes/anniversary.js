@@ -15,10 +15,15 @@
 //   layers[2] – the pergola, nearest  backdrop  – the lake, at the page's end
 //   scene     – the hanging candles, the boat, the lamps.
 //
-// Tap the water: a lamp is set afloat there and drifts away towards the far
-// shore. Tap the boat: it rocks. Tap or swing the candles. Tap elsewhere: gold
-// sparks. When every hidden message is found (celebrate), the lake fills with
-// lamps.
+// Easter eggs, each one about the two of you:
+//   tap the water   – a lamp is set afloat, and a second one comes to join it:
+//                     the two drift off together, side by side, never apart
+//   tap a candle    – it swings, and the first stars over the pergola join up,
+//                     one gold line at a time, into a heart
+//   tap the boat    – it rocks, and two people are sitting in it, close
+//   every hidden message found (celebrate) – lamps come from all over the lake
+//                     and gather into a heart on the water, mirrored in it
+// Tap anywhere else: gold sparks.
 //
 // (Painted in lake.js and pergola.js.)
 
@@ -37,6 +42,44 @@ const PAPER = 0.5; // how strongly the lokta paper shows
 const BOAT_UP = 178; // the boat's waterline, above the page's end
 const reachFor = (w) => Math.min(380, 210 + w * 0.12); // how far the vines hang down at the sides
 const boatScale = (w) => Math.min(1.35, 0.6 + w * 0.00055);
+
+// Two people sitting close in the boat, seen from behind, warm against the
+// lamplight (in the boat's own px, its waterline at 0; `seen` 0 … 1).
+function twoOfYou(ctx, k, seen, time) {
+  ctx.save();
+  ctx.globalAlpha = seen;
+  ctx.scale(k, k);
+  const lean = Math.sin(time * 0.6) * 0.6; // breathing, a little
+  for (const [x, tall, tilt] of [[-13, 1, 0.16], [12, 0.92, -0.1]]) {
+    ctx.save();
+    ctx.translate(x, -38);
+    ctx.rotate(tilt + lean * 0.01);
+    // shoulders and back
+    const body = ctx.createLinearGradient(-12, -40 * tall, 12, 0);
+    body.addColorStop(0, '#3B2A30');
+    body.addColorStop(1, '#22161C');
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.moveTo(-12, 0);
+    ctx.bezierCurveTo(-13, -16 * tall, -11, -27 * tall, -6, -30 * tall);
+    ctx.lineTo(6, -30 * tall);
+    ctx.bezierCurveTo(11, -27 * tall, 13, -16 * tall, 12, 0);
+    ctx.closePath();
+    ctx.fill();
+    // head
+    ctx.beginPath();
+    ctx.arc(0, -36 * tall, 6.4 * tall, 0, Math.PI * 2);
+    ctx.fill();
+    // the lamplight on their edges
+    ctx.strokeStyle = 'rgba(255, 196, 120, 0.55)';
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.arc(0, -36 * tall, 6.4 * tall, -2.4, -0.6);
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+}
 
 // ── The still pictures ───────────────────────────────────────────────────────
 
@@ -153,7 +196,21 @@ export default {
     // Their place on the lake: x, and `up` = how far above the page's end.
     const r = seeded(71);
     const lamps = [];
-    const setAfloat = (x, up, vx, vup, age) => lamps.push({ x, up, vx, vup, age, phase: rand(0, 6) });
+    const setAfloat = (x, up, vx, vup, age) => {
+      const l = { x, up, vx, vup, age, phase: rand(0, 6) };
+      lamps.push(l);
+      return l;
+    };
+    // a second lamp that comes to `lead` and stays beside it
+    const join = (lead) => {
+      const side = lead.x < W / 2 ? 1 : -1;
+      lamps.push({ x: lead.x + side * 70, up: lead.up + 18, vx: 0, vup: 0, age: -0.7, phase: rand(0, 6), lead, side });
+    };
+    // a point on a heart, 16 wide each side, for t = 0 … 1
+    const heartAt = (t) => {
+      const a = t * Math.PI * 2;
+      return [16 * Math.sin(a) ** 3, -(13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a))];
+    };
     for (let i = 0; i < Math.round(7 + W / 70); i++) {
       const up = 40 + r() ** 0.7 * (SHORE - 70);
       setAfloat(r() * W, up, (r() - 0.5) * 3, 1.2 + r() * 1.6, 9);
@@ -178,6 +235,21 @@ export default {
 
     const boatAt = () => ({ x: W / 2, y: world.height - BOAT_UP });
 
+    let constellation = null; // the stars joining into a heart: { age }
+    const starsJoin = () => {
+      if (!constellation || constellation.age > 9) constellation = { age: 0 };
+    };
+    let together = false; // the two of you, in the boat
+    let seen = 0; // …how much (fades in)
+    // the stars of the heart, over the pergola (page px), in the order they join
+    const starsOf = () => {
+      const [cx, cy, k] = [W / 2, Math.max(150, Math.min(260, BEAM + 210)), Math.min(4.2, W / 110)];
+      return Array.from({ length: 10 }, (_, i) => {
+        const [hx, hy] = heartAt(i / 10);
+        return [cx + hx * k, cy + hy * k];
+      });
+    };
+
     return {
       backdrop(ctx, w, h) {
         lakeside(ctx, w, h);
@@ -189,12 +261,34 @@ export default {
         lights?.update(time);
         flowers?.update(time);
         bursts.update(dt);
+        if (constellation) constellation.age += dt;
+        seen += ((together ? 1 : 0) - seen) * Math.min(1, dt * 1.5);
         tiltSpeed += (-9 * tilt - 1.1 * tiltSpeed) * dt;
         tilt += tiltSpeed * dt;
         for (let i = lamps.length - 1; i >= 0; i--) {
           const l = lamps[i];
           l.age += dt;
           const k = waterSize(world.height - l.up, world.height);
+          // gathered into the heart: it glides to its place, stays, then goes on
+          if (l.heart) {
+            const settle = Math.min(1, dt * 1.4);
+            l.x += (l.heart.x - l.x) * settle;
+            l.up += (l.heart.up - l.up) * settle;
+            l.heart.time -= dt;
+            if (l.heart.time < 0) Object.assign(l, { heart: null, vx: rand(-2, 2), vup: rand(1, 2.5) });
+            continue;
+          }
+          // a lamp that came to join another: beside it, a lamp's width apart
+          if (l.lead) {
+            if (!lamps.includes(l.lead)) l.lead = null;
+            else {
+              const gap = 22 * waterSize(world.height - l.lead.up, world.height);
+              const follow = Math.min(1, dt * (l.age < 2 ? 1.2 : 3));
+              l.x += (l.lead.x + l.side * gap - l.x) * follow;
+              l.up += (l.lead.up + 3 - l.up) * follow;
+              continue;
+            }
+          }
           l.x += (l.vx + Math.sin(time * 0.3 + l.phase) * 3) * k * dt;
           l.up += l.vup * k * dt;
           l.vup += (1.6 - l.vup) * dt * 0.25; // a push wears off
@@ -211,25 +305,32 @@ export default {
         }
       },
 
+      // a candle pressed and let go (they can be grabbed): the stars join up
+      tapHeld(point) {
+        if (hanging.some(({ strand }) => strand[strand.length - 1] === point)) starsJoin();
+      },
+
       burst(x, y) {
         // a candle: it swings
         for (const { strand } of hanging) {
           const end = strand[strand.length - 1];
           if (Math.hypot(end.x - x, end.y + 30 - y) < 46) {
             end.px = end.x - (x < end.x ? 1 : -1) * 5;
+            starsJoin();
             return;
           }
         }
         const b = boatAt();
         if (Math.abs(x - b.x) < 165 * size && y > b.y - 150 * size && y < b.y + 14) {
           tiltSpeed += (x < b.x ? -1 : 1) * 0.34;
+          together = true;
           rings.push({ x: b.x - 60 * size, y: b.y + 6, age: 0 }, { x: b.x + 70 * size, y: b.y + 6, age: -0.15 });
           return;
         }
         const up = world.height - y;
         if (up < SHORE - 16) {
           rings.push({ x, y, age: 0 });
-          if (lamps.length < 60) setAfloat(x, up, rand(-5, 5), 12, 0);
+          if (lamps.length < 60) join(setAfloat(x, up, rand(-5, 5), 12, 0));
           return;
         }
         bursts.spawn(x, y, 18, () => ({ color: pick(['#E8C27A', '#FFE3A6', '#D9A04E']), size: Math.round(rand(6, 11)) }), { speed: 6, gravity: 0.14, drag: 0.06, life: 2 });
@@ -239,7 +340,15 @@ export default {
       // after another, and gold sparks over it
       celebrate() {
         const { view } = this;
-        for (let i = 0; i < 30; i++) setAfloat(rand(0.04, 0.96) * W, rand(24, SHORE - 120), rand(-3, 3), rand(2, 5), -i * 0.14);
+        // a heart of lamps on the water in front of the boat, flattened as the
+        // lake lies away from us; lamps come to it from all over
+        const count = 26;
+        const k = Math.min(5.4, W / 80);
+        for (let i = 0; i < count; i++) {
+          const [hx, hy] = heartAt(i / count);
+          const l = setAfloat(rand(0.04, 0.96) * W, rand(24, SHORE - 120), 0, 0, -i * 0.08);
+          l.heart = { x: W / 2 + hx * k, up: 92 - hy * k * 0.42, time: 16 + i * 0.05 };
+        }
         rings.push({ x: W * 0.3, y: world.height - 90, age: 0 }, { x: W * 0.7, y: world.height - 140, age: -0.4 });
         if (!view) return;
         for (let i = 0; i < 4; i++) {
@@ -308,6 +417,7 @@ export default {
           ctx.translate(b.x, b.y + bob);
           ctx.rotate(a);
           ctx.drawImage(s.canvas, (-s.width / 2) * size, (-s.height / 2 - BOAT_LINE) * size, s.width * size, s.height * size);
+          if (seen > 0.01) twoOfYou(ctx, size, seen, time);
           ctx.restore();
         };
         let boatDrawn = false;
@@ -330,6 +440,34 @@ export default {
           let s = jasmine(f.size);
           if (depth.blur) s = blurred(s, depth.blur);
           stamp(ctx, s, f.p.x, f.p.y, { angle: f.spin, flip: 0.5 + 0.5 * Math.cos(f.spin), scale: depth.scale, alpha: depth.alpha * 0.85 });
+        }
+
+        // the stars joining into a heart, one line at a time
+        if (constellation && constellation.age < 12) {
+          const { age } = constellation;
+          const fade = Math.min(1, age * 2) * Math.min(1, (12 - age) / 2);
+          const stars = starsOf();
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.strokeStyle = `rgba(255, 222, 160, ${(0.55 * fade).toFixed(3)})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          stars.forEach(([x, y], i) => {
+            const [nx, ny] = stars[(i + 1) % stars.length];
+            const drawn = Math.max(0, Math.min(1, age * 2.2 - 0.6 - i * 0.32)); // each line after the last
+            if (drawn <= 0) return;
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + (nx - x) * drawn, y + (ny - y) * drawn);
+          });
+          ctx.stroke();
+          stars.forEach(([x, y], i) => {
+            const lit = Math.max(0, Math.min(1, age * 2.2 - i * 0.32)) * fade;
+            if (lit <= 0) return;
+            const twinkle = 0.75 + 0.25 * Math.sin(time * 3 + i * 1.7);
+            stamp(ctx, glow(26, '255, 230, 180'), x, y, { alpha: lit * 0.8 * twinkle });
+            stamp(ctx, sparkle(9, '#FFF4DA'), x, y, { alpha: lit * twinkle });
+          });
+          ctx.restore();
         }
 
         // the hanging candles

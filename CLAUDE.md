@@ -33,9 +33,32 @@ Read `README.md` for setup and the folder map.
   finding all of them on a page fires `unwrap:celebrate`, which ThemeLayer hands
   to the theme (`scene.celebrate`, else a few bursts). Love's own: the moon, and
   the rooftops. Birthday's own: the branches (flowers fall), the presents on the
-  grass (a balloon comes out) and the cake (its candles go out). Anniversary's own:
-  the water (a lamp is set afloat), the boat (it rocks) and the hanging candles
-  (they swing); finding every star fills the lake with lamps.
+  grass (a balloon comes out), the cake (its candles go out) and the tall grass
+  in front of the table (sways; tap or brush it, `scene.brush` from ThemeLayer).
+  The table's garland is greenery, jasmine, jacaranda and roses (no vases): the
+  founder found marigolds out of place at this garden party (26 Nov 2026). Its
+  falling jacaranda flowers are `upright` pieces (themes/particles.js, drawn with
+  `pose()`): cup up, gliding side to side and leaning into it, each a little
+  heavier or lighter, instead of tumbling (the founder: they "seem like paper").
+  Birthday's easter eggs (founder, 26 Nov 2026: one moment to see, one to
+  feel, one to hear; spelling the name happens once, not in every egg): tap a
+  flag and the middle swag of bunting turns over flag by flag, spelling the
+  receiver's first name in gold (`name()`: ThemeLayer's `name` prop, from the
+  gift's `opening.name`; GiftPage and Canvas pass it; no name → "Hurray");
+  tap the bulbs and each chimes the next note of "Happy Birthday" with a gold
+  note floating off it (`themes/chime.js`: Web Audio, no files, quiet, only
+  ever from a tap; no mute button yet); a dandelion clock in the grass between
+  the presents (`themes/dandelion.js`): tap or brush it and its seeds float
+  away up the page, a new head grows in 16 s. The finale plays the whole song
+  with the bulbs lighting in time, spells the name, blows the dandelion, and
+  sends balloons up. The ready-made's hidden messages lead to each.
+  Anniversary's own,
+  each about the two of them (founder, 26 Nov 2026: Love's eggs make people
+  feel special, the others didn't): a lamp set afloat gets a second one that
+  comes to join it and stays beside it; tapping a candle joins the first stars
+  into a gold heart; tapping the boat shows two people sitting close in it;
+  every star found gathers the lamps into a heart on the water. A grabbable
+  thing tapped without moving calls `scene.tapHeld(point)` (ThemeLayer).
 - **Each surprise has its own job** (founder, 25 Nov 2026: "gift box and letter
   have the same use case"). Letter = long words. Gift box = a present to unwrap,
   never words: roses, butterflies, a paper crane or a framed photo (`blocks/giftbox/presents.js`;

@@ -12,7 +12,8 @@
 //     stand (world px); `avoid(x, y)` = true where none should (the path,
 //     the altar's platform); `size(y)` = how big things are at that height
 //     (perspective); `camera(p)` = the scene's camera, so a tap lands on
-//     the right blades while the layer slides with the garden.
+//     the right blades while the layer slides with the garden. `density`: how
+//     many blades (1 = the garden's; fewer for a narrow strip of it).
 
 import { seeded, stamp, glow } from '../../themes/draw';
 
@@ -25,13 +26,13 @@ const FLOWERS = ['#FFFBF0', '#FFF3D2', '#F4DC74', '#F2C4BA', '#DCCBEB'];
 // blade is a curved stroke, redrawn as it sways), and made cheap phones lag.
 const PHONE_DENSITY = 0.4;
 
-export function tallGrass({ top, bottom, avoid, size, camera, seed = 5 }) {
+export function tallGrass({ top, bottom, avoid, size, camera, seed = 5, density: thickness = 1 }) {
   return (w) => {
     const r = seeded(seed);
     const skip = avoid(w);
     const blades = [];
     const phone = typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches ?? false);
-    const density = phone ? PHONE_DENSITY : 1;
+    const density = (phone ? PHONE_DENSITY : 1) * thickness;
     const count = Math.round((((bottom - top) * (w + 40)) / 30) * density);
     for (let i = 0; i < count; i++) {
       const y = top + (bottom - top) * Math.sqrt(r()); // more of them near us

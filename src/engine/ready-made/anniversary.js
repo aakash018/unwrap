@@ -5,8 +5,9 @@
 // box (cranes stay together for life), three things I'd choose again, us in
 // photos, a letter, our song, a promise for the year ahead, and the lake at
 // the end, where every tap sets a lamp afloat (see themes/anniversary.js).
-// Three hidden messages lead from one easter egg to the next; finding them all
-// fills the lake with lamps.
+// Three hidden messages lead to the easter eggs (stars that join into a heart,
+// lamps that come in pairs, the two of you in the boat); finding them all
+// gathers the lamps into a heart on the water.
 
 const SOFT = '#E2D6BC';
 const INK = '#F8EEDA';
@@ -101,8 +102,8 @@ ${from || 'me'}`,
 
     // ── hidden (the last one, on the water, is also where the page ends: so the
     // lake comes below all the rest) ──
-    secret('You found one!\n\nNow swing the candles hanging up there.', [380, 300, 44], [570, 330, 44], [1010, 470, 48]),
-    secret('Ten years from now, I’ll still pick you.\n\nAnd I’ll still lose the remote.', [380, 3180, 44], [590, 2080, 44], [18, 1620, 48]),
-    secret('The last one’s on the lake: tap our boat.\n\nAnd find a quiet evening for us soon.', [118, 4636, 44], [180, 4436, 44], [380, 4060, 48]),
+    secret('You found one!\n\nSwing a candle up there. Then look at the stars.', [380, 300, 44], [570, 330, 44], [1010, 470, 48]),
+    secret('Ten years from now, I’ll still pick you.\n\nWhen you get to the lake, set a lamp afloat. Watch who comes to join it.', [380, 3180, 44], [590, 2080, 44], [18, 1620, 48]),
+    secret('The last one: tap our boat. Somebody’s waiting in it.\n\nFind a quiet evening for us soon.', [118, 4636, 44], [180, 4436, 44], [380, 4060, 48]),
   ];
 }

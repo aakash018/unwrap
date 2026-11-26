@@ -1,7 +1,7 @@
 // The birthday table in the garden, for the Birthday theme (birthday.js).
 // All measured from the middle of the table's foot: (cx, foot).
 //
-//   partyTable(ctx, cx, foot, half)  – the table in its linen cloth, a marigold
+//   partyTable(ctx, cx, foot, half)  – the table in its linen cloth, a garden
 //                                      garland along it, and what's laid on it;
 //                                      `half` = half its width
 //   candles(cx, foot)                – where the cake's candle flames go
@@ -11,7 +11,8 @@
 //   balloon(color, radius)           – a soft, pearly balloon (a sprite)
 //   flag(ctx, a, b, tip, color)      – one silk flag of the bunting
 
-import { sprite, stamp, shade, foil, marigold, leaf, bow, glow, pearl, goldBead, seeded } from './draw';
+import { sprite, stamp, shade, foil, leaf, bow, glow, pearl, goldBead, seeded } from './draw';
+import { jasmine } from './pergola';
 import { rose } from '../sections/events/flowers';
 import { blossom } from './jacaranda';
 
@@ -131,19 +132,26 @@ function cloth(ctx, cx, foot, half) {
   ctx.fill();
 }
 
-// Marigolds and leaves in swags along the table's edge.
+// A garden garland in swags along the table's edge: greenery, little white
+// jasmine and jacaranda flowers, and roses where the swags meet. (It was
+// marigolds once: they looked out of place at a garden party.)
 function garland(ctx, cx, y, half) {
   const swags = Math.max(4, 2 * Math.round(half / 70));
   const width = (half * 2) / swags;
+  const r = seeded(31);
+  const greens = ['#5E7A44', '#6F8B52', '#86A06A', '#4F6B3A'];
   for (let i = 0; i < swags; i++) {
     const x0 = cx - half + i * width;
-    const steps = Math.round(width / 7);
+    const steps = Math.round(width / 5);
     for (let k = 0; k <= steps; k++) {
       const u = k / steps;
       const x = x0 + u * width;
       const yy = y + Math.sin(u * Math.PI) * 24;
-      if (k % 4 === 2) stamp(ctx, leaf(17, '#5E7A44'), x, yy + 7, { angle: Math.PI + (0.5 - u) });
-      stamp(ctx, marigold(11, (k + i) % 2 ? 'saffron' : 'gold'), x, yy, { scale: 0.6 });
+      // the greenery: soft leaves either way along the swag
+      stamp(ctx, leaf(Math.round(12 + r() * 6), greens[k % greens.length]), x, yy + (r() - 0.5) * 6, { angle: Math.PI / 2 + (r() - 0.5) * 2.2 });
+      // flowers tucked into it
+      if (k % 3 === 1) stamp(ctx, jasmine(9), x + (r() - 0.5) * 4, yy + (r() - 0.5) * 5, { angle: r() * 6 });
+      else if (k % 5 === 3) stamp(ctx, blossom(10), x, yy + 2, { angle: r() * 6 });
     }
   }
   for (let i = 0; i <= swags; i++) {
@@ -224,40 +232,6 @@ function cake(ctx, cx, y) {
   }
 }
 
-// A brass vase of roses, marigolds and jacaranda.
-function bouquet(ctx, x, y, seed, size = 1) {
-  const r = seeded(seed);
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(size, size);
-  for (let i = 0; i < 18; i++) {
-    const a = -Math.PI / 2 + (r() - 0.5) * 2.5;
-    stamp(ctx, leaf(Math.round(24 + r() * 14), r() < 0.5 ? '#5E7A4C' : '#7C9460'), Math.cos(a) * 24, -46 + Math.sin(a) * 24, { angle: a + Math.PI / 2 });
-  }
-  for (let i = 0; i < 9; i++) {
-    const a = -Math.PI / 2 + (r() - 0.5) * 2.2;
-    for (let k = 0; k < 4; k++) stamp(ctx, blossom(13), Math.cos(a) * (30 + r() * 14), -50 + Math.sin(a) * (28 + r() * 18), { angle: a + Math.PI / 2 + (r() - 0.5) });
-  }
-  for (let i = 0; i < 17; i++) {
-    const a = r() * Math.PI * 2;
-    const d = Math.sqrt(r()) * 25;
-    const [px, py] = [Math.cos(a) * d, -54 + Math.sin(a) * d * 0.75];
-    if (i % 4 === 0) stamp(ctx, marigold(14, i % 8 ? 'gold' : 'saffron'), px, py, { scale: 0.58 });
-    else stamp(ctx, rose(Math.round(16 + r() * 7), ['blush', 'white', 'lilac'][i % 3]), px, py, { angle: r() * 6 });
-  }
-  ctx.fillStyle = foil(ctx, -15, 0, 15, 0);
-  ctx.beginPath();
-  ctx.moveTo(-9, -38);
-  ctx.bezierCurveTo(-5, -30, -17, -24, -14, -10);
-  ctx.quadraticCurveTo(-12, -1, -8, 0);
-  ctx.lineTo(8, 0);
-  ctx.quadraticCurveTo(12, -1, 14, -10);
-  ctx.bezierCurveTo(17, -24, 5, -30, 9, -38);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-}
-
 // Laddoos piled on a brass plate.
 function laddoos(ctx, x, y) {
   ctx.fillStyle = foil(ctx, x - 26, 0, x + 26, 0);
@@ -319,14 +293,8 @@ function cupcakes(ctx, x, y) {
 export function partyTable(ctx, cx, foot, half) {
   cloth(ctx, cx, foot, half);
   const top = foot - TABLE - 8; // where things stand
-  bouquet(ctx, cx - half * 0.82, top, 3, 1);
-  bouquet(ctx, cx + half * 0.82, top, 9, 1);
   cupcakes(ctx, cx - half * 0.5 - 6, top + 2);
   laddoos(ctx, cx + half * 0.5 + 4, top + 3);
-  if (half > 260) {
-    bouquet(ctx, cx - half * 0.3 - 20, top, 14, 0.8);
-    bouquet(ctx, cx + half * 0.28 + 20, top, 19, 0.8);
-  }
   cake(ctx, cx, top + 2);
   garland(ctx, cx, foot - TABLE + 4, half - 4);
 }

@@ -13,12 +13,17 @@
 //
 // Touching the physics canvas (anywhere no element covers):
 //   • press on a balloon / flower / light   → grab it, drag, let go to fling
+//                                             (let go without moving: scene.tapHeld)
 //   • tap empty space                       → the theme's little burst
 //   • swipe up or down                      → scrolls the page, as usual
 //   • just move the pointer                 → petals and confetti get blown aside
+//   • drag across it (finger, or mouse held) → brushes the theme, if it can be (scene.brush: tall grass)
 //
 // When every hidden message on the page has been found (blocks/secret), the
 // theme celebrates: scene.celebrate(), or a few of its little bursts.
+//
+// `name` is who the gift is for (its loader's name): a theme can use it, as
+// createScene(world, { name }) → name(), always the latest (Birthday's bunting).
 
 import { useEffect, useRef, useState } from 'react';
 import { World } from './physics';
@@ -66,12 +71,14 @@ function useSettled(width) {
 // `screenHeight` = how tall one screen is (page px). In the editor that's the
 // design screen (800); in the preview it's the viewer's real window, so
 // decorations meant for the first screen land on it.
-export default function ThemeLayer({ themeId, width, height, zoom = 1, screenHeight = PAGE_HEIGHT }) {
+export default function ThemeLayer({ themeId, width, height, zoom = 1, screenHeight = PAGE_HEIGHT, name = '' }) {
   const theme = THEMES[themeId];
   const animated = Boolean(theme?.createScene);
   const layerCount = theme?.layers?.length ?? 0;
   const extra = Math.round(height * SCROLL_SHIFT); // room for layers to slide while scrolling
 
+  const nameRef = useRef(name);
+  nameRef.current = name;
   const boxRef = useRef(null); // the whole page
   const canvasRef = useRef(null); // physics
   const backdropRef = useRef(null);
@@ -80,6 +87,8 @@ export default function ThemeLayer({ themeId, width, height, zoom = 1, screenHei
   const zoomRef = useRef(zoom);
   const held = useRef(null); // the point being dragged, if any
   const justHeld = useRef(false); // …and whether the last press was on one
+  const lastMove = useRef(null); // where the pointer last was (page px), to tell how it moved
+  const pressedAt = useRef(null); // where something grabbable was pressed
   const sceneWidth = useSettled(width); // the scene is laid out again for it
   const look = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 }); // pointer, -1..1, eased
 
@@ -174,7 +183,7 @@ export default function ThemeLayer({ themeId, width, height, zoom = 1, screenHei
     const phone = onPhone();
 
     const world = new World(width, height);
-    const scene = theme.createScene(world, { calm, screen: screenHeight });
+    const scene = theme.createScene(world, { calm, screen: screenHeight, name: () => nameRef.current });
     sim.current = { world, scene };
 
     // let ropes settle before the first frame, so nothing visibly "drops in"
@@ -286,10 +295,12 @@ export default function ThemeLayer({ themeId, width, height, zoom = 1, screenHei
     const s = sim.current;
     if (!s || e.button !== 0) return;
     const { x, y } = toPage(e);
+    lastMove.current = { x, y };
     const point = s.world.pick(x, y);
     justHeld.current = Boolean(point);
     if (point) {
       e.preventDefault();
+      pressedAt.current = { x, y };
       s.world.grab(point);
       held.current = point;
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -307,16 +318,24 @@ export default function ThemeLayer({ themeId, width, height, zoom = 1, screenHei
     const s = sim.current;
     if (!s) return;
     const { x, y } = toPage(e);
+    const before = lastMove.current;
+    lastMove.current = { x, y };
     if (held.current) {
       s.world.drag(held.current, x, y);
     } else {
       s.world.blow(x, y);
       e.currentTarget.style.cursor = s.world.pick(x, y) ? 'grab' : '';
+      // a finger, or the mouse held down, moving across the theme: brush it (tall grass)
+      if (before && (e.buttons || e.pointerType !== 'mouse')) s.scene.brush?.(x, y, x - before.x, y - before.y);
     }
   };
 
   const onPointerUp = (e) => {
     if (!held.current) return;
+    // pressed and let go without moving: a tap on it (scene.tapHeld)
+    const { x, y } = toPage(e);
+    const from = pressedAt.current;
+    if (from && Math.hypot(x - from.x, y - from.y) < 8) sim.current?.scene.tapHeld?.(held.current, x, y);
     sim.current?.world.release(held.current);
     held.current = null;
     e.currentTarget.style.cursor = 'grab';

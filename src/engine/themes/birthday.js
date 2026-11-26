@@ -14,22 +14,38 @@
 //   layers[0] – the sky, far          layers[1] – boughs far off, out of focus
 //   layers[2] – the boughs, nearest   backdrop  – the garden, at the page's end
 //   scene     – bunting and bulbs that swing, balloons you can fling, falling
-//               flowers, the candles.
+//               flowers, the candles, and the tall grass in front of the table.
 //
 // Tap the cake: the candles go out, the garden cheers, and they light again.
 // Tap the presents on the grass: a balloon gets out of one, with confetti.
-// Tap the boughs: flowers come down. Tap anywhere else: a little puff of them.
+// Tap the boughs: flowers come down. Tap the grass, or brush through it with a
+// finger: it parts and springs back. Tap anywhere else: a little puff of flowers.
+//
+// Its easter eggs, each a different kind of moment (the hidden messages in
+// ready-made/birthday.js lead to them):
+//   • tap a flag: the bunting flips over, flag by flag, and spells their name
+//     in gold (the name on the gift's loader: `name()`)
+//   • tap the bulbs: each one chimes the next note of "Happy Birthday"
+//     (chime.js), and a little gold note floats off it
+//   • a dandelion clock in the grass by the table: blow on it (tap, or brush
+//     past) and its seeds, their wish, float away up the page
+//   • every hidden message found: the garden plays the whole song, bulbs
+//     lighting in time, spells their name, blows the dandelion, and balloons
+//     rise while flowers come down
 //
 // (Painted in jacaranda.js and party.js.)
 
 import { edisonBulb, glow, goldFlake, leaf, smoothLine, stamp, floatAngle, rand, pick, seeded, blurred } from './draw';
-import { createDrift, createBursts, DEPTHS } from './particles';
+import { createDrift, createBursts, DEPTHS, pose } from './particles';
+import { chime, playSong, SONG } from './chime';
+import { seedHead, seedSprite, dandelion } from './dandelion';
 import { blossom, canopy, softCanopy, jacaranda } from './jacaranda';
 import { partyTable, candles, candleFlame, wrappedGift, lawnLantern, balloon, flag } from './party';
 import { paintedSky } from '../sections/texture';
 import { printOnPaper } from '../sections/paper';
 import { clouds } from '../sections/garden/sky';
 import { hills } from '../sections/garden/garden';
+import { tallGrass } from '../sections/garden/grass';
 
 const TOP = 800; // the top scene's height
 const BOTTOM = 820; // the bottom scene's height
@@ -40,6 +56,32 @@ const FOOT = 96; // the table's foot, above the page's end
 
 const SILKS = ['#FBF3E4', '#C9B2EE', '#F3C6BE', '#E9B44C', '#A9BF9A', '#9C7FD4'];
 const BALLOONS = ['#C4ACEC', '#F4CFC8', '#FFF6E8', '#E8BE6A', '#A48AD8'];
+
+const SPELL_HOLD = 9; // s: how long the name stays up in the bunting
+const WAVE = 0.09; // s between one flag turning and the next
+const REGROW = 16; // s: until the dandelion has a new head
+const GOLD_INK = '#A97B2C';
+
+// The letters of a name, as people read them (a Devanagari letter with its
+// marks stays one), in capitals where there are any.
+function lettersOf(word) {
+  const upper = word.toLocaleUpperCase();
+  if (typeof Intl !== 'undefined' && Intl.Segmenter) return Array.from(new Intl.Segmenter().segment(upper), (part) => part.segment);
+  return Array.from(upper);
+}
+
+// A little gold music note, `size` tall, with its foot at (0, 0).
+function musicNote(ctx, size) {
+  ctx.beginPath();
+  ctx.ellipse(0, 0, size * 0.27, size * 0.19, -0.45, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(size * 0.2, -size, size * 0.08, size);
+  ctx.beginPath();
+  ctx.moveTo(size * 0.28, -size);
+  ctx.quadraticCurveTo(size * 0.62, -size * 0.75, size * 0.5, -size * 0.4);
+  ctx.quadraticCurveTo(size * 0.48, -size * 0.66, size * 0.28, -size * 0.72);
+  ctx.fill();
+}
 
 const reachFor = (w) => Math.min(430, 190 + w * 0.15); // how far the boughs reach in
 const tableHalf = (w) => Math.min(340, w * 0.43); // half the table's width
@@ -211,7 +253,7 @@ export default {
     },
   ],
 
-  createScene(world, { calm }) {
+  createScene(world, { calm, name = () => '' }) {
     const W = world.width;
 
     // ── Bunting and bulbs, tied to the boughs (on a wide page also higher up,
@@ -226,13 +268,14 @@ export default {
     const piece = (px) => Math.round((W + 16) / swags / px); // how many pieces that long
     const bulbCords = hang(96, -6, swags, piece(37), { sag: swags > 1 ? 1.09 : 1.06, droop: 50, point: { mass: 0.6, drag: 0.04, wind: 0.3, grabbable: true, grabRadius: 12 } });
     const bulbs = bulbCords.flatMap((cord) => cord.slice(1, -1));
+    const middle = Math.floor(swags / 2); // the swag in the middle (the only one on a phone)
     const cords = hang(178, -6, swags, piece(30), { sag: swags > 1 ? 1.16 : 1.1, droop: 70, point: { mass: 0.5, drag: 0.04, wind: 0.5, grabbable: true, grabRadius: 13 } });
-    const flags = cords.flatMap((cord) =>
+    const flags = cords.flatMap((cord, swag) =>
       cord.slice(0, -1).map((a, i) => {
         const b = cord[i + 1];
         const tip = world.addPoint((a.x + b.x) / 2, a.y + 36, { mass: 0.12, drag: 0.07, wind: 1.1, gravity: 0.7, bounded: false });
         for (const end of [a, b]) world.addLink(end, tip, { length: 38, stiffness: 0.6 });
-        return { a, b, tip, color: SILKS[i % SILKS.length] };
+        return { a, b, tip, color: SILKS[i % SILKS.length], swag, turn: 0, letter: null, from: 0, to: 0 };
       }),
     );
 
@@ -282,7 +325,7 @@ export default {
       });
     }
 
-    const make = () => ({ size: pick([12, 14, 16, 18]), spinSpeed: rand(0.01, 0.035), flutter: rand(0.9, 1.8) });
+    const make = () => ({ size: pick([12, 14, 16, 18]), upright: true });
     const drift = calm ? null : createDrift(world, { count: Math.round(16 + W / 45), gravity: 0.1, make });
     const bursts = createBursts(world);
 
@@ -291,6 +334,102 @@ export default {
     let blownAt = null; // when they were blown out
     const smoke = [];
     const cakeAt = () => candles(W / 2, world.height - FOOT);
+
+    // ── Tall grass in front of the table: it sways in the breeze; a tap parts
+    // it, a finger brushes through it (sections/garden/grass.js). Made again
+    // when the page grows, as it stands at the page's end. ──
+    let grass = null;
+    let grassFor = 0;
+    const grassNow = () => {
+      const h = world.height;
+      if (grassFor !== h) {
+        grassFor = h;
+        const [top, bottom] = [h - FOOT + 6, h + 6];
+        // short enough not to hide the presents (they can be tapped), and none
+        // growing up in front of them
+        const avoid = () => (x, y) => presents().some(([px, py, pw]) => Math.abs(x - px) < pw * 0.62 && y < py + 18);
+        grass = tallGrass({ top, bottom, avoid, size: (y) => 0.3 + (0.32 * (y - top)) / (bottom - top), camera: () => 0, seed: 9, density: 0.55 })(W);
+      }
+      return grass;
+    };
+    let grassTime = 0;
+
+    // ── Easter egg: their name in the bunting. The middle swag's flags turn
+    // over one after another, each with a gold letter on its back. ──
+    let spelled = false;
+    const spell = () => {
+      if (spelled) return;
+      const row = flags.filter((f) => f.swag === middle);
+      let word = lettersOf((name() ?? '').trim().split(/\s+/)[0] ?? '');
+      if (!word.length) word = lettersOf(row.length >= 14 ? 'Happy birthday' : 'Hurray');
+      word = word.slice(0, row.length);
+      const start = Math.floor((row.length - word.length) / 2);
+      const now = world.time;
+      row.forEach((f, i) => {
+        const letter = word[i - start];
+        if (!letter?.trim()) return;
+        f.letter = letter;
+        f.from = now + (i - start) * WAVE;
+        f.to = f.from + SPELL_HOLD;
+      });
+      spelled = true;
+    };
+    const flagAt = (x, y) => flags.find((f) => Math.hypot(x - (f.a.x + f.b.x + f.tip.x) / 3, y - (f.a.y + f.b.y + f.tip.y) / 3) < 17);
+
+    // ── Easter egg: the bulbs chime "Happy Birthday", a note a tap ──
+    let note = 0;
+    const flare = bulbs.map(() => 0);
+    const floating = []; // little gold notes, rising off the bulbs
+    const ring = (i, sound = true) => {
+      if (sound) chime(note++);
+      flare[i] = 1;
+      floating.push({ x: bulbs[i].x, y: bulbs[i].y + 24, age: 0, side: rand(-1, 1) });
+    };
+    const bulbAt = (x, y) => bulbs.findIndex((p) => Math.hypot(x - p.x, y - (p.y + 9)) < 18);
+    // the whole song, the bulbs of the middle strand lighting up in time: low notes on the left
+    let song = [];
+    const sing = () => {
+      const strand = bulbCords[middle].slice(1, -1).map((p) => bulbs.indexOf(p));
+      const pitches = [...new Set(SONG.map((n) => n.freq))].sort((m, n) => m - n);
+      const start = world.time;
+      playSong((i, delay) => {
+        const k = pitches.indexOf(SONG[i].freq) / (pitches.length - 1);
+        song.push({ at: start + delay, bulb: strand[Math.round(0.12 * (strand.length - 1) + k * 0.76 * (strand.length - 1))] });
+      });
+    };
+
+    // ── Easter egg: a dandelion clock in the grass, for a wish ──
+    const wish = { blownAt: -Infinity, seeds: [] };
+    const stemAt = () => ({ x: W / 2 + 4, foot: world.height + 4, height: 50 }); // low in the grass, between the presents
+    const headAt = () => {
+      const { x, foot, height } = stemAt();
+      return { x, y: foot - height };
+    };
+    const full = () => world.time - wish.blownAt > REGROW;
+    const blow = () => {
+      if (!full()) return;
+      wish.blownAt = world.time;
+      const head = headAt();
+      for (let i = 0; i < 48; i++) {
+        const a = rand(0, Math.PI * 2);
+        wish.seeds.push({
+          x: head.x + Math.cos(a) * 10,
+          y: head.y + Math.sin(a) * 10,
+          vx: Math.cos(a) * rand(15, 60) + 18,
+          vy: Math.sin(a) * rand(10, 40) - 25,
+          rise: rand(30, 62),
+          drift: rand(6, 22),
+          phase: rand(0, 6),
+          age: -rand(0, 0.5), // not all at once
+          life: rand(11, 16),
+          size: Math.round(rand(9, 13)),
+        });
+      }
+    };
+    const nearHead = (x, y, reach) => {
+      const head = headAt();
+      return Math.hypot(x - head.x, y - head.y) < reach;
+    };
 
     return {
       backdrop(ctx, w, h) {
@@ -338,9 +477,62 @@ export default {
           smoke[i].age += dt;
           if (smoke[i].age > 2.4) smoke.splice(i, 1);
         }
+
+        // the bunting turning over, and back
+        if (spelled) {
+          let still = false;
+          for (const f of flags) {
+            if (!f.letter) continue;
+            const over = time >= f.from && time < f.to ? 1 : 0;
+            f.turn += Math.sign(over - f.turn) * Math.min(Math.abs(over - f.turn), dt / 0.55);
+            if (over || f.turn > 0 || time < f.from) still = true;
+            else f.letter = null; // turned back: done
+          }
+          spelled = still;
+        }
+        // the song, and the bulbs lighting up
+        for (let i = song.length - 1; i >= 0; i--) {
+          if (time < song[i].at) continue;
+          if (song[i].bulb >= 0) ring(song[i].bulb, false);
+          song.splice(i, 1);
+        }
+        flare.forEach((f, i) => (flare[i] = Math.max(0, f - dt * 1.4)));
+        for (let i = floating.length - 1; i >= 0; i--) {
+          floating[i].age += dt;
+          if (floating[i].age > 1.8) floating.splice(i, 1);
+        }
+        // the wish, floating away
+        for (let i = wish.seeds.length - 1; i >= 0; i--) {
+          const seed = wish.seeds[i];
+          seed.age += dt;
+          if (seed.age < 0) continue;
+          const easy = Math.min(1, dt * 0.9);
+          seed.vx += (seed.drift + Math.sin(time * 0.9 + seed.phase) * 22 + world.wind * 0.02 - seed.vx) * easy;
+          seed.vy += (-seed.rise - seed.vy) * easy;
+          seed.x += seed.vx * dt;
+          seed.y += seed.vy * dt;
+          if (seed.age > seed.life) wish.seeds.splice(i, 1);
+        }
+      },
+
+      // a finger or the mouse, held down and moving: through the grass
+      brush(x, y, dx, dy) {
+        if (nearHead(x, y, 26)) blow();
+        if (y > world.height - FOOT - 40) grassNow().brush(x, y, dx, dy);
+      },
+
+      // pressed and let go on something you can grab: a bulb chimes, a flag spells
+      tapHeld(point) {
+        const bulb = bulbs.indexOf(point);
+        if (bulb >= 0) return ring(bulb);
+        if (flags.some((f) => f.a === point || f.b === point)) spell();
       },
 
       burst(x, y) {
+        if (nearHead(x, y, 30)) return blow();
+        const bulb = bulbAt(x, y);
+        if (bulb >= 0) return ring(bulb);
+        if (flagAt(x, y)) return spell();
         const flames = cakeAt();
         const [mx, my] = [flames[2].x, flames[2].y];
         if (Math.abs(x - mx) < 75 && y > my - 50 && y < my + 190) {
@@ -361,16 +553,23 @@ export default {
           bursts.spawn(px, py - ph, 26, () => ({ gold: true, size: Math.round(rand(7, 12)), variant: Math.floor(rand(0, 6)), spinSpeed: rand(0.05, 0.14) }), { speed: 9, gravity: 0.26, drag: 0.045, life: 3 });
           return;
         }
+        if (y > world.height - FOOT) {
+          grassNow().tap(x, y);
+          return;
+        }
         const boughs = y < 60 + reachFor(W) * 0.7 * Math.min(1, Math.abs(x / W - 0.5) * 2);
         if (boughs) {
-          for (let i = 0; i < 3; i++) bursts.spawn(x + rand(-50, 50), y + rand(-20, 20), 14, make, { speed: 2.5, gravity: 0.2, drag: 0.07, life: 4.5 });
-        } else bursts.spawn(x, y, 14, make, { speed: 6, gravity: 0.22, drag: 0.06, life: 2.8 });
+          for (let i = 0; i < 3; i++) bursts.spawn(x + rand(-50, 50), y + rand(-20, 20), 12, make, { speed: 1.6, gravity: 0.24, drag: 0.08, life: 5.5 });
+        } else bursts.spawn(x, y, 12, make, { speed: 4, gravity: 0.26, drag: 0.08, life: 4 });
       },
 
       // all the hidden messages found: balloons rise past, flowers come down
       celebrate() {
         const { view } = this;
         if (!view) return;
+        sing();
+        spell();
+        blow();
         for (let i = 0; i < 18; i++) {
           risen.push({ x: rand(0.05, 0.95) * W, y: view.top + view.height + rand(30, 120), radius: Math.round(rand(20, 34)), color: BALLOONS[i % BALLOONS.length], age: -i * 0.22, phase: rand(0, 6) });
         }
@@ -385,18 +584,54 @@ export default {
           const depth = DEPTHS[f.depth];
           let s = blossom(f.size, f.depth ? 'near' : 'far');
           if (depth.blur) s = blurred(s, depth.blur);
-          stamp(ctx, s, f.p.x, f.p.y, { angle: f.spin, flip: 0.55 + 0.45 * Math.cos(f.spin * 1.3), scale: depth.scale, alpha: depth.alpha });
+          stamp(ctx, s, f.p.x, f.p.y, { ...pose(f), scale: depth.scale, alpha: depth.alpha });
         }
 
         // the bulbs
         for (const cord of bulbCords) smoothLine(ctx, cord, { color: 'rgba(70, 50, 70, 0.8)', width: 1.2 });
         bulbs.forEach((p, i) => {
-          stamp(ctx, glow(30, '255, 214, 140'), p.x, p.y + 10, { alpha: 0.4 + 0.2 * Math.sin(time * 1.6 + i * 1.7) });
+          const lit = flare[i];
+          stamp(ctx, glow(30, '255, 214, 140'), p.x, p.y + 10, { alpha: Math.min(1, 0.4 + 0.2 * Math.sin(time * 1.6 + i * 1.7) + lit * 0.6), scale: 1 + lit * 1.3 });
           stamp(ctx, edisonBulb(17), p.x, p.y + 9);
         });
+        ctx.fillStyle = GOLD_INK;
+        for (const n of floating) {
+          const k = n.age / 1.8;
+          ctx.save();
+          ctx.globalAlpha *= Math.min(1, n.age * 6) * (1 - k);
+          ctx.translate(n.x + n.side * 14 * k + Math.sin(n.age * 5) * 2, n.y + 8 - 34 * k);
+          musicNote(ctx, 11);
+          ctx.restore();
+        }
 
         // the bunting
-        for (const f of flags) flag(ctx, f.a, f.b, f.tip, f.color);
+        for (const f of flags) {
+          if (f.turn <= 0) {
+            flag(ctx, f.a, f.b, f.tip, f.color);
+            continue;
+          }
+          // turning over about the line from its middle to its tip: narrower, then its back
+          const k = Math.cos(Math.PI * f.turn);
+          const wide = Math.max(0.04, Math.abs(k));
+          const [mx, my] = [(f.a.x + f.b.x) / 2, (f.a.y + f.b.y) / 2];
+          const a = { x: mx + (f.a.x - mx) * wide, y: my + (f.a.y - my) * wide };
+          const b = { x: mx + (f.b.x - mx) * wide, y: my + (f.b.y - my) * wide };
+          if (k >= 0) {
+            flag(ctx, a, b, f.tip, f.color);
+            continue;
+          }
+          flag(ctx, a, b, f.tip, '#FBF3E4');
+          ctx.save();
+          ctx.translate(mx + (f.tip.x - mx) * 0.4, my + (f.tip.y - my) * 0.4);
+          ctx.rotate(Math.atan2(f.tip.y - my, f.tip.x - mx) - Math.PI / 2);
+          ctx.scale(wide, 1);
+          ctx.fillStyle = GOLD_INK;
+          ctx.font = '19px "Instrument Serif", "Tiro Devanagari Hindi", Georgia, serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(f.letter, 0, 0);
+          ctx.restore();
+        }
         for (const cord of cords) smoothLine(ctx, cord, { color: '#F8EEDC', width: 2.2 });
 
         // balloons
@@ -443,9 +678,30 @@ export default {
         }
         ctx.restore();
 
+        // the tall grass (only while the garden is on screen)
+        const dt = Math.min(0.05, Math.max(0, time - grassTime));
+        grassTime = time;
+        const { view } = this;
+        const garden = !view || view.top + view.height > world.height - FOOT - 60;
+        if (garden) grassNow().draw(ctx, time, dt, 0);
+
+        // the dandelion, and its seeds on their way
+        if (garden) {
+          const { x, foot, height } = stemAt();
+          const since = world.time - wish.blownAt;
+          const sway = Math.sin(time * 1.2) * 2.5 + Math.sin(time * 2.9) * 0.8;
+          const top = dandelion(ctx, x, foot, height, sway, seedHead(17, false));
+          if (since > REGROW - 2) stamp(ctx, seedHead(17, true), top.x, top.y, { alpha: Math.min(1, (since - REGROW + 2) / 2) });
+        }
+        for (const seed of wish.seeds) {
+          if (seed.age < 0) continue;
+          const show = Math.min(1, seed.age * 4, (seed.life - seed.age) / 2);
+          stamp(ctx, seedSprite(seed.size), seed.x, seed.y, { angle: Math.max(-0.5, Math.min(0.5, seed.vx * 0.012)), alpha: show });
+        }
+
         for (const b of bursts.pieces) {
-          const s = b.gold ? goldFlake(b.size, b.variant, 'gold') : blossom(b.size);
-          stamp(ctx, s, b.p.x, b.p.y, { angle: b.spin, flip: Math.cos(b.spin * 1.2), alpha: bursts.fade(b) });
+          if (b.gold) stamp(ctx, goldFlake(b.size, b.variant, 'gold'), b.p.x, b.p.y, { angle: b.spin, flip: Math.cos(b.spin * 1.2), alpha: bursts.fade(b) });
+          else stamp(ctx, blossom(b.size), b.p.x, b.p.y, { ...pose(b), alpha: bursts.fade(b) });
         }
       },
     };
