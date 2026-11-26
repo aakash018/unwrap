@@ -22,12 +22,12 @@ export function toPage(saved) {
     const ink = inks[one.props.color];
     return ink ? { ...one, props: { ...one.props, color: ink } } : one;
   });
-  return { kind: 'gift', theme: saved.theme, background: saved.background, blocks };
+  return { kind: 'gift', theme: saved.theme, background: saved.background, opening: saved.opening, blocks };
 }
 
-export function toSaved({ kind, template, theme, background, blocks }) {
+export function toSaved({ kind, template, theme, background, opening, blocks }) {
   if (kind === 'invitation') {
     return { format: FORMAT, kind, template, chapters: blocks.map(({ id, type, props }) => ({ id, type, props })) };
   }
-  return { format: FORMAT, kind, theme, background, elements: blocks.map(({ id, type, frame, frames, props }) => ({ id, type, frame, ...(frames && { frames }), props })) };
+  return { format: FORMAT, kind, theme, background, ...(opening && { opening }), elements: blocks.map(({ id, type, frame, frames, props }) => ({ id, type, frame, ...(frames && { frames }), props })) };
 }

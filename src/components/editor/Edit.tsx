@@ -5,6 +5,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { startProgress } from "@/components/PageProgress";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Saved } from "@/engine/page/types";
 import { saveDraft } from "@/lib/drafts";
@@ -83,6 +84,7 @@ export default function Edit({ owner, kind, id, sample }: Props) {
           channel={id}
           status={status}
           onHome={async () => {
+            startProgress();
             await save();
             router.push("/home");
           }}

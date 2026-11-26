@@ -1,11 +1,12 @@
 // Right panel (Figma's "Design" panel): the selected element's settings —
-// or, with nothing selected, a gift's theme. An invitation has no theme (its
+// or, with nothing selected, a gift's theme and what its loader says. An invitation has no theme (its
 // chapters bring their own scenery), so there the panel isn't shown until
 // something is selected (see Editor.jsx).
 export const showsInspector = (page) => Boolean(page.selectedId) || page.kind === 'gift';
 import { BLOCKS } from '../../blocks';
 import SelectedBlockPanel from './SelectedBlockPanel';
 import ThemePicker from './ThemePicker';
+import OpeningSettings from './OpeningSettings';
 import Section from '../Toolbar/Section';
 
 export default function Inspector({ page, dispatch }) {
@@ -27,9 +28,14 @@ export default function Inspector({ page, dispatch }) {
           dispatch={dispatch}
         />
       ) : (
-        <Section title="Theme">
-          <ThemePicker page={page} dispatch={dispatch} />
-        </Section>
+        <>
+          <Section title="Theme">
+            <ThemePicker page={page} dispatch={dispatch} />
+          </Section>
+          <Section title="Opening">
+            <OpeningSettings page={page} dispatch={dispatch} />
+          </Section>
+        </>
       )}
     </aside>
   );

@@ -17,6 +17,6 @@ export default function Preview({ owner, kind, id, sample, framed }: Props) {
 
   if (opened.state === "opening") return <Message title="Opening…" />;
   if (opened.state !== "open") return <NotOpened kind={kind} state={opened.state} />;
-  if (framed) return <PlainPreview saved={opened.saved} since={opened.edited} channel={id} />;
-  return <DevicePreview saved={opened.saved} since={opened.edited} channel={id} framedUrl={`${previewUrl(kind, id)}?framed`} />;
+  if (framed) return <PlainPreview saved={opened.saved} since={opened.edited} channel={id} toName={opened.toName} />;
+  return <DevicePreview saved={opened.saved} since={opened.edited} channel={id} framedUrl={`${previewUrl(kind, id)}?framed`} toName={opened.toName} />;
 }

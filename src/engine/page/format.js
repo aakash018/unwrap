@@ -3,8 +3,9 @@
 // can be used anywhere, also without the rest of the engine.)
 //
 //   an invitation: { format, kind: 'invitation', template, chapters: [{ id, type, props }] }
-//   a gift:        { format, kind: 'gift', theme, background,
+//   a gift:        { format, kind: 'gift', theme, background, opening?,
 //                    elements: [{ id, type, frame, frames?, props }] }
+//                    (opening: { name?, words? } – on its loader, page/Loader.jsx)
 //                    (frame: on a phone; frames: on tablet and desktop, see layouts.js)
 
 import { newId } from '../utils/newId';

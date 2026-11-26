@@ -2,6 +2,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { startProgress } from "@/components/PageProgress";
 import { useRef, useState, type FormEvent } from "react";
 import type { TemplateId } from "@/engine/page/types";
 import { newId } from "@/engine/utils/newId";
@@ -25,6 +26,7 @@ export default function NewInvitation({ owner }: { owner: string }) {
       const { startInvitation } = await import("@/engine/templates/start");
       const id = newId();
       await saveDraft(owner, id, startInvitation(word("template") as TemplateId, [word("name1"), word("name2")]));
+      startProgress();
       router.push(editUrl("invitation", id));
     } catch (problem) {
       console.error("The invitation wasn't made:", problem);

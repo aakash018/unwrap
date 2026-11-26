@@ -12,5 +12,7 @@ export type Frame = { x: number; y: number; w: number; rotation: number; size?: 
 export type Element = Chapter & { frame: Frame; frames?: { tablet?: Frame; desktop?: Frame } };
 
 export type SavedInvitation = { format: number; kind: "invitation"; template: TemplateId; chapters: Chapter[] };
-export type SavedGift = { format: number; kind: "gift"; theme: ThemeId; background: string; elements: Element[] };
+// opening: who it's for and the words above their name, on its loader (page/Loader.jsx)
+export type Opening = { name?: string; words?: string };
+export type SavedGift = { format: number; kind: "gift"; theme: ThemeId; background: string; opening?: Opening; elements: Element[] };
 export type Saved = SavedInvitation | SavedGift;

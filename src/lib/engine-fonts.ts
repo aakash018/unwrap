@@ -1,6 +1,6 @@
 // The fonts the engine uses.
 
-import { Cormorant_Garamond, DM_Sans, Instrument_Serif, Kalam, Tiro_Devanagari_Hindi } from "next/font/google";
+import { Cormorant_Garamond, DM_Sans, Hanken_Grotesk, Instrument_Serif, Kalam, Tiro_Devanagari_Hindi } from "next/font/google";
 
 // The engine asks for these fonts by their own names (also in its drawings),
 // so loading them here is enough.
@@ -14,5 +14,7 @@ const cormorant = Cormorant_Garamond({
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--f3" });
 const tiro = Tiro_Devanagari_Hindi({ weight: "400", subsets: ["devanagari"], variable: "--f4" });
 const kalam = Kalam({ weight: ["400", "700"], subsets: ["latin"], variable: "--f5", preload: false });
-export const engineFonts = [instrument, cormorant, dmSans, tiro, kalam].map((font) => font.variable).join(" ");
+// the site's own logo (components/Logo.tsx), in the gift's loader
+const hanken = Hanken_Grotesk({ weight: "600", subsets: ["latin"], variable: "--f6" });
+export const engineFonts = [instrument, cormorant, dmSans, tiro, kalam, hanken].map((font) => font.variable).join(" ");
 

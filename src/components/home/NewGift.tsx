@@ -3,6 +3,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { startProgress } from "@/components/PageProgress";
 import { useRef, useState, type FormEvent } from "react";
 import type { ReadyMadeId, ThemeId } from "@/engine/page/types";
 import { newId } from "@/engine/utils/newId";
@@ -32,6 +33,7 @@ export default function NewGift({ owner, name }: { owner: string; name: string }
       const names = { toName, fromName: word("from") };
       const gift = from === "ready" ? startGift({ readyMadeId: choice as ReadyMadeId, ...names }) : startGift({ theme: choice as ThemeId, ...names });
       await saveDraft(owner, id, gift, toName || undefined);
+      startProgress();
       router.push(editUrl("gift", id));
     } catch (problem) {
       console.error("The gift wasn't made:", problem);

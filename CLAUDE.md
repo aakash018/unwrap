@@ -56,6 +56,30 @@ Read `README.md` for setup and the folder map.
   `-small` films and less sharp canvases: the full set crashed phone browsers
   (founder, 26 Nov 2026). Keep canvases few and reused there: never make one a
   frame, and set a finished one's size to 0 so its memory comes back at once.
+- **Between pages: a thin line at the top** (`components/PageProgress.tsx`, in
+  the site's and the editor's layouts; founder, 26 Nov 2026). It starts when a
+  link to another page here is clicked (caught first, as Next.js's links stop
+  the click), when a form marked `data-progress` is sent (signing in and out),
+  or when code calls `startProgress()` before `router.push`. It shows only after
+  150 ms, creeps towards 92%, and fills and fades when the new page is there.
+  Most moves cross between the site and the editor, which reload the whole
+  page: the line stays on the old one until the new one has loaded.
+- **A gift opens with its loader** (founder, 26 Nov 2026: opening a gift froze,
+  and the box's pictures weren't ready). `engine/page/Loader.jsx`: a fine gold bow
+  draws itself over the theme's deep colour, then a line of words (default
+  "मायाको कोसेली, हजुरको लागि"), the receiver's name in large italic, a gold
+  hairline that fills as things load, and "unwrap कोसेली" small at the bottom
+  (the site's logo font, Hanken Grotesk, `--f6`). With no name: तिम्रो लागि over
+  a large कोसेली. It's markup + CSS (index.css, `.gift-loader`), so it's in the
+  first HTML. Behind it everything loads: anything slow says so with
+  `holdOpen(promise)` (`page/ready.js`): the theme's still pictures, each gift
+  box's pictures, films and petals. It opens when all are done (at least 2.6 s,
+  so it can be read), or 6 s after the link was opened, whatever is still
+  loading; a box tapped before its films are here wiggles until they are. The
+  bow comes undone, the words drift up, the gift shows through. The name and
+  words are saved with the gift (`opening: { name, words }`), set in the editor's
+  "Opening" section with one-tap suggestions; the editor's Preview shows the
+  loader too. Invitations still show their first words (components/open).
 - **Phones: test with phone specs, not just a phone-sized window** (founder,
   26 Nov 2026: a long gift froze, its background never showed). The cause was
   the theme: its still pictures are page-tall, ~34 million pixels on a long

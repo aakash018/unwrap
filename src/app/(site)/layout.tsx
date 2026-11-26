@@ -4,6 +4,7 @@
 import type { Metadata } from "next";
 import { Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
+import PageProgress from "@/components/PageProgress";
 
 const hanken = Hanken_Grotesk({ variable: "--font-hanken", subsets: ["latin"] });
 
@@ -15,7 +16,10 @@ export const metadata: Metadata = {
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${hanken.variable} antialiased`}>
-      <body className="min-h-dvh font-sans">{children}</body>
+      <body className="min-h-dvh font-sans">
+        <PageProgress />
+        {children}
+      </body>
     </html>
   );
 }

@@ -25,6 +25,7 @@ import { World } from './physics';
 import { THEMES } from './index';
 import { prepareFast } from './draw';
 import { PAGE_HEIGHT } from '../config';
+import { holdOpen } from '../page/ready';
 
 const STEP = 1 / 60; // physics runs at a fixed 60 steps per second
 const MAX_PIXELS = 8_000_000; // cap canvas sizes so long pages stay fast
@@ -98,8 +99,14 @@ export default function ThemeLayer({ themeId, width, height, zoom = 1, screenHei
   // painting them all at once froze the page).
   useEffect(() => {
     if (!animated) return;
+    // (a gift's loader waits until they're painted)
+    let painted;
+    holdOpen(new Promise((resolve) => (painted = resolve)));
     let timer = setTimeout(() => paintStills(), 120);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      painted(); // (or given up: a new painting starts)
+    };
 
     function paintStills() {
       const world = new World(width, height); // a throwaway, just to call backdrop()
@@ -140,6 +147,7 @@ export default function ThemeLayer({ themeId, width, height, zoom = 1, screenHei
       const next = () => {
         steps.shift()?.();
         if (steps.length) timer = setTimeout(next, 16);
+        else painted();
       };
       next();
     }

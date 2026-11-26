@@ -1,6 +1,7 @@
 // What flies out of the gift box as it opens: petals, thrown up in a fountain,
 // turning over as they fall; and a little gold dust in its light.
 // burst(anchor, kind) plays once, over the page, around `anchor` (the box's opening).
+// preparePetals(kind) gets its petals ready beforehand.
 
 import { calm, pageLayer } from './pageLayer';
 import { PETALS } from './petals';
@@ -20,6 +21,9 @@ const dyed = (kind) => {
   }));
   return made.get(kind);
 };
+// Made ready before the box is opened (GiftBoxBlock waits for it with the page).
+export const preparePetals = (kind) => dyed(kind);
+
 async function dye(kind) {
   const { colors, picture } = PETALS[kind] ?? PETALS.marigold;
   const shapes = await Promise.all(

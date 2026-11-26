@@ -63,7 +63,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             </p>
           )}
 
-          <form action={signInWithGoogle} className="mt-8">
+          <form action={signInWithGoogle} data-progress className="mt-8">
             <input type="hidden" name="next" value={goTo} />
             <GoogleButton disabled={!ready} />
           </form>

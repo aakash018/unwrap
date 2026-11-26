@@ -22,7 +22,7 @@ export default function AccountMenu({ user }: { user: User }) {
         <NotYetButton what="Entering a code" className={MENU_ITEM}>
           Enter an activation code
         </NotYetButton>
-        <form action={signOut}>
+        <form action={signOut} data-progress>
           <button type="submit" className={MENU_ITEM}>
             Sign out
           </button>

@@ -43,7 +43,7 @@ function readSaved() {
   }
 }
 
-export default function DevicePreview({ saved, since, channel, framedUrl }) {
+export default function DevicePreview({ saved, since, channel, framedUrl, toName }) {
   const [device, setDevice] = useState(readSaved);
   const { width, height } = useWindowSize();
 
@@ -57,7 +57,7 @@ export default function DevicePreview({ saved, since, channel, framedUrl }) {
   };
 
   // a real phone: no switcher, just the gift
-  if (width < 600) return <Preview saved={saved} since={since} channel={channel} />;
+  if (width < 600) return <Preview saved={saved} since={since} channel={channel} toName={toName} />;
 
   const bar = (
     <div className="fixed top-4 left-1/2 z-50 flex -translate-x-1/2 gap-1 rounded-full bg-[#1E1714]/85 p-1 shadow-[0_8px_30px_rgba(0,0,0,0.4)] backdrop-blur">
@@ -82,7 +82,7 @@ export default function DevicePreview({ saved, since, channel, framedUrl }) {
     return (
       <>
         {bar}
-        <Preview saved={saved} since={since} channel={channel} />
+        <Preview saved={saved} since={since} channel={channel} toName={toName} />
       </>
     );
   }

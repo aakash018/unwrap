@@ -21,7 +21,7 @@ export function startInvitation(template, names) {
 // From a ready-made gift (`readyMadeId`), or from just a theme. The names are
 // who it's for and who it's from, if they're already known.
 export function startGift({ theme, readyMadeId, toName, fromName }) {
-  const gift = { format: FORMAT, kind: 'gift', background: '#fff8f0' };
+  const gift = { format: FORMAT, kind: 'gift', background: '#fff8f0', ...(toName && { opening: { name: toName } }) };
   if (readyMadeId) return { ...gift, ...readyMade(readyMadeId, { to: toName, from: fromName }) };
   const { id, type, frame, props } = createBlock('heading', { x: 215, y: 480 }, {
     text: toName ? `For ${toName}` : 'For you',

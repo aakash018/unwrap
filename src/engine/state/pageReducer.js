@@ -6,6 +6,7 @@
 //   template: 'garden-wedding',   // an invitation's (see templates)
 //   theme: 'love',                // a gift's background (see themes)
 //   background: '#fff8f0',        // colour used by the 'plain' theme
+//   opening: { name, words },     // a gift's: what its loader says (page/Loader.jsx)
 //   blocks: [                     // elements on the page; later ones sit on top
 //     {
 //       id: 'abc',
@@ -28,6 +29,7 @@
 //   { type: 'REMOVE_BLOCK',   id }
 //   { type: 'MOVE_LAYER',     id, direction: 'forward' | 'backward' }
 //   { type: 'SELECT_BLOCK',   id }                                  // id = null to deselect
+//   { type: 'SET_OPENING',    opening: { name?, words? } }          // merges into what the loader says
 //   { type: 'SET_THEME',      theme: 'marigold' }
 //   { type: 'SET_BACKGROUND', color: '#ffeedd' }                    // for the plain theme
 //   { type: 'MOVE_SECTION',   id, direction: 'up' | 'down' }        // reorder full-width sections
@@ -182,6 +184,10 @@ export function pageReducer(page, action) {
 
     case 'SET_BACKGROUND':
       return { ...page, background: action.color };
+
+    // what the gift's loader says: { name?, words? }
+    case 'SET_OPENING':
+      return { ...page, opening: { ...page.opening, ...action.opening } };
 
     default:
       console.warn('Unknown action:', action);

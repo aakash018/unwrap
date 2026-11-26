@@ -14,6 +14,7 @@ import { enableSmoothScroll } from './smoothScroll';
 import { LAYOUTS, layoutFor, shownIn, zoomFor } from './layouts';
 import { THEMES } from '../themes';
 import { toPage } from './saved';
+import { markMounted } from './ready';
 
 // The visible size of the window (without any scrollbar). With `keepHeight`, a
 // phone's address bar sliding away changes nothing: a gift's balloons and
@@ -45,6 +46,9 @@ export default function Viewer({ saved }) {
 
   // the page glides when scrolled with a mouse wheel or trackpad
   useEffect(() => enableSmoothScroll(), []);
+
+  // everything on the page has now said what it's still getting ready (ready.js)
+  useEffect(() => markMounted(), []);
 
   const layout = isGift ? layoutFor(width) : 'mobile';
   const page = useMemo(() => {

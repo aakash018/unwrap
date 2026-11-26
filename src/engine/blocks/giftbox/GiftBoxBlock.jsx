@@ -16,10 +16,12 @@ import { pictureOf } from './pictures';
 import { AREA } from './area';
 import { loadFilms } from './film';
 import { createOpening } from './opening';
-import { burst } from './burst';
+import { burst, preparePetals } from './burst';
+import { holdOpen } from '../../page/ready';
 import { calm } from './pageLayer';
 
 const STEPS = ['tap the ribbon', 'once more · खोल त!'];
+const BOX_PICTURES = ['box-back', 'box-front', 'box-lid', 'box-shade', 'tied-shade', 'silk-tied', 'silk-fallen', 'floor'];
 const PRESENT_AT = 430; // ms into the opening: the present starts up
 const LAYER = 'pointer-events-none absolute inset-0 size-full max-w-none';
 const FILM = { left: AREA.x, top: AREA.y, width: AREA.w, height: AREA.h };
@@ -65,26 +67,18 @@ export default function GiftBoxBlock({ props }) {
     return () => opening.current.free();
   }, []);
 
-  // fetch the films once the box is nearly on screen
+  // Everything it needs, fetched and made ready now: while the gift's loader
+  // is up (page/Loader.jsx waits for these), so nothing stutters later.
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
-        observer.disconnect();
-        // (when the page has nothing else to do: on a phone the theme is still painting)
-        const later = window.requestIdleCallback ?? ((fn) => setTimeout(fn, 1500));
-        later(() => loadFilms().catch(() => {}), { timeout: 4000 });
-      },
-      { rootMargin: '600px' },
-    );
-    observer.observe(box.current);
-    return () => observer.disconnect();
-  }, []);
-
-  // and what's inside, while it's being unwrapped
-  useEffect(() => {
-    for (const name of [...pictures, 'petal-0', 'petal-1', 'petal-2']) new Image().src = pictureOf(name);
-  }, [pictures]);
+    const ready = (name) => {
+      const img = new Image();
+      img.src = pictureOf(name);
+      return img.decode();
+    };
+    holdOpen(loadFilms());
+    holdOpen(preparePetals(props.petals));
+    for (const name of [...BOX_PICTURES, ...pictures, 'petal-0', 'petal-1', 'petal-2']) holdOpen(ready(name));
+  }, [pictures, props.petals]);
 
   const timers = useRef([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
@@ -130,7 +124,7 @@ export default function GiftBoxBlock({ props }) {
 
   return (
     <div className="flex flex-col items-center">
-      <div ref={box} className={`relative h-[374px] w-[300px] origin-bottom ${moving === 'open' ? 'animate-heave' : ''}`}>
+      <div ref={box} className={`relative h-[374px] w-[300px] origin-bottom ${{ open: 'animate-heave', waiting: 'animate-wait' }[moving] ?? ''}`}>
         {/* the box's canvas: its foot is 21 px above the canvas's bottom */}
         <div className="absolute -bottom-[21px] left-0 h-[330px] w-[300px]">
           <img src={pictureOf('floor')} alt="" draggable={false} className="pointer-events-none absolute max-w-none" style={{ left: -60, top: 0, width: 420, height: 380 }} />

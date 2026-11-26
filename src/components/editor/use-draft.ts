@@ -20,6 +20,13 @@ async function startSample(sample: Invitation | Gift): Promise<Opened> {
   return { state: "open", saved: startGift({ theme: sample.theme, toName: sample.toName }), toName: sample.toName, edited: 0 };
 }
 
+// Gifts from before 26 Nov 2026 didn't keep who they're for with them: its
+// loader (engine/page/Loader.jsx) and its settings need it.
+function withName(saved: Saved, toName?: string): Saved {
+  if (saved.kind !== "gift" || !toName || saved.opening?.name !== undefined) return saved;
+  return { ...saved, opening: { ...saved.opening, name: toName } };
+}
+
 export function useDraft(owner: string, kind: Kind, id: string, sample: Invitation | Gift | null): Opened {
   const [opened, setOpened] = useState<Opened>({ state: "opening" });
 
@@ -29,7 +36,7 @@ export function useDraft(owner: string, kind: Kind, id: string, sample: Invitati
     (async () => {
       try {
         const draft = await loadDraft(owner, id);
-        if (draft?.saved.kind === kind) return show({ state: "open", saved: draft.saved, toName: draft.toName, edited: draft.edited });
+        if (draft?.saved.kind === kind) return show({ state: "open", saved: withName(draft.saved, draft.toName), toName: draft.toName, edited: draft.edited });
         // (an invitation can't be opened as a gift, or the other way round)
         show(sample && !draft ? await startSample(sample) : { state: "missing" });
       } catch (problem) {
