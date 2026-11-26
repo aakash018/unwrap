@@ -29,6 +29,13 @@ import { PAGE_HEIGHT } from '../config';
 const STEP = 1 / 60; // physics runs at a fixed 60 steps per second
 const MAX_PIXELS = 8_000_000; // cap canvas sizes so long pages stay fast
 const MAX_LIVE = 3_000_000; // …and the one redrawn every frame even more
+// Phones have far less graphics memory: all the still pictures together get
+// about a quarter of a computer's (founder, 26 Nov 2026: on long pages the
+// background never showed, and the page froze).
+const PHONE_BACKDROP = 3_500_000;
+const PHONE_LAYERS = 4_500_000; // shared by all the parallax layers
+const PHONE_LIVE = 1_800_000;
+const onPhone = () => window.matchMedia?.('(pointer: coarse)').matches ?? false;
 const EDGE = 100; // how far the physics canvas reaches above and below the screen (page px)
 
 // Parallax: how far the nearest layer moves (page px) when the pointer goes
@@ -86,41 +93,55 @@ export default function ThemeLayer({ themeId, width, height, zoom = 1, screenHei
 
   // ── Paint the still pictures: backdrop + parallax layers ────────────────
   // Waits a moment after the last change (page growing, zooming) and paints
-  // once, instead of repainting on every step.
+  // once, instead of repainting on every step. One picture at a time, each in
+  // its own turn, so taps and scrolling get through in between (on a phone,
+  // painting them all at once froze the page).
   useEffect(() => {
     if (!animated) return;
-    const timer = setTimeout(() => paintStills(), 120);
+    let timer = setTimeout(() => paintStills(), 120);
     return () => clearTimeout(timer);
 
     function paintStills() {
       const world = new World(width, height); // a throwaway, just to call backdrop()
       const scene = theme.createScene(world, { calm: true, screen: screenHeight });
+      const phone = onPhone();
+      const steps = [];
 
       const backdrop = backdropRef.current;
       if (backdrop && scene.backdrop) {
-        const s = resolution(zoom, width, height);
-        backdrop.width = Math.round(width * s);
-        backdrop.height = Math.round(height * s);
-        const ctx = backdrop.getContext('2d');
-        ctx.scale(s, s);
-        scene.backdrop(ctx, width, height);
+        steps.push(() => {
+          const s = resolution(zoom, width, height, 2, phone ? PHONE_BACKDROP : MAX_PIXELS);
+          backdrop.width = Math.round(width * s);
+          backdrop.height = Math.round(height * s);
+          const ctx = backdrop.getContext('2d');
+          ctx.scale(s, s);
+          scene.backdrop(ctx, width, height);
+        });
       }
 
       // Layers are faint and soft: a modest resolution is plenty.
       const lw = width + LAYER_MARGIN * 2;
       const lh = height + extra + LAYER_MARGIN * 2;
-      const ls = resolution(zoom, lw, lh, 1.5);
+      const ls = resolution(zoom, lw, lh, 1.5, phone ? PHONE_LAYERS / Math.max(1, layerCount) : MAX_PIXELS);
       (theme.layers ?? []).forEach((layer, i) => {
-        const canvas = layerRefs.current[i];
-        if (!canvas) return;
-        canvas.width = Math.round(lw * ls);
-        canvas.height = Math.round(lh * ls);
-        const ctx = canvas.getContext('2d');
-        ctx.scale(ls, ls);
-        ctx.translate(LAYER_MARGIN, LAYER_MARGIN + extra); // page (0, 0) inside the picture
-        const area = { x0: -LAYER_MARGIN, x1: width + LAYER_MARGIN, y0: -LAYER_MARGIN - extra, y1: height + LAYER_MARGIN };
-        layer.paint(ctx, area, width, height, screenHeight);
+        steps.push(() => {
+          const canvas = layerRefs.current[i];
+          if (!canvas) return;
+          canvas.width = Math.round(lw * ls);
+          canvas.height = Math.round(lh * ls);
+          const ctx = canvas.getContext('2d');
+          ctx.scale(ls, ls);
+          ctx.translate(LAYER_MARGIN, LAYER_MARGIN + extra); // page (0, 0) inside the picture
+          const area = { x0: -LAYER_MARGIN, x1: width + LAYER_MARGIN, y0: -LAYER_MARGIN - extra, y1: height + LAYER_MARGIN };
+          layer.paint(ctx, area, width, height, screenHeight);
+        });
       });
+
+      const next = () => {
+        steps.shift()?.();
+        if (steps.length) timer = setTimeout(next, 16);
+      };
+      next();
     }
     // zoom only changes sharpness; repaint when it settles noticeably
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -142,6 +163,7 @@ export default function ThemeLayer({ themeId, width, height, zoom = 1, screenHei
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const phone = onPhone();
 
     const world = new World(width, height);
     const scene = theme.createScene(world, { calm, screen: screenHeight });
@@ -176,7 +198,7 @@ export default function ThemeLayer({ themeId, width, height, zoom = 1, screenHei
       // The physics canvas covers just that part (resized only if it must be).
       const tall = Math.min(world.height, Math.ceil(visible) + EDGE * 2);
       const top = Math.round(Math.max(0, Math.min(world.height - tall, viewTop - EDGE)));
-      const s = resolution(zoomRef.current, world.width, tall, 2, MAX_LIVE);
+      const s = resolution(zoomRef.current, world.width, tall, 2, phone ? PHONE_LIVE : MAX_LIVE);
       const [pw, ph] = [Math.round(world.width * s), Math.round(tall * s)];
       if (canvas.width !== pw || canvas.height !== ph) {
         canvas.width = pw;

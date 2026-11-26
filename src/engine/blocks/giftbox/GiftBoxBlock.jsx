@@ -71,7 +71,9 @@ export default function GiftBoxBlock({ props }) {
       ([entry]) => {
         if (!entry.isIntersecting) return;
         observer.disconnect();
-        loadFilms().catch(() => {});
+        // (when the page has nothing else to do: on a phone the theme is still painting)
+        const later = window.requestIdleCallback ?? ((fn) => setTimeout(fn, 1500));
+        later(() => loadFilms().catch(() => {}), { timeout: 4000 });
       },
       { rootMargin: '600px' },
     );

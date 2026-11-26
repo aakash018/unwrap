@@ -55,7 +55,16 @@ Read `README.md` for setup and the folder map.
   fetched as the box comes near the screen. Phones (touch screens) get the
   `-small` films and less sharp canvases: the full set crashed phone browsers
   (founder, 26 Nov 2026). Keep canvases few and reused there: never make one a
-  frame, and set a finished one's size to 0 so its memory comes back at once. Anything else meant to look like a
+  frame, and set a finished one's size to 0 so its memory comes back at once.
+- **Phones: test with phone specs, not just a phone-sized window** (founder,
+  26 Nov 2026: a long gift froze, its background never showed). The cause was
+  the theme: its still pictures are page-tall, ~34 million pixels on a long
+  gift, painted all at once. On touch screens ThemeLayer now gives them a pixel
+  budget (`PHONE_BACKDROP`, `PHONE_LAYERS`, `PHONE_LIVE`) and paints one picture
+  per turn. To check, run Chrome with its processor slowed 6× and
+  `--enable-low-end-device-mode` (and once with software graphics,
+  `--use-angle=swiftshader`), as a phone with touch, and measure long tasks
+  and frame rate: before, a 14 s freeze on /g/demo; after, under 0.5 s. Anything else meant to look like a
   real thing should be made this way, never as flat SVG.
 - **Reading:** letters and hidden messages open in `blocks/shared/Reader.jsx`
   (a portal on the body). Receivers don't see a voice note with no recording.
