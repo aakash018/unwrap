@@ -4,7 +4,7 @@ export type TemplateId = "hindu-wedding" | "garden-wedding";
 export type ThemeId = "love" | "marigold" | "birthday" | "anniversary" | "plain";
 
 // A gift with its surprises already in place, to start from (engine/ready-made).
-export type ReadyMadeId = "love-sky" | "birthday-garden";
+export type ReadyMadeId = "love-sky" | "birthday-garden" | "anniversary-lake";
 
 export type Chapter = { id: string; type: string; props: Record<string, unknown> };
 // (size and align: for words, in that layout)

@@ -20,12 +20,19 @@ const GREENS = ['#5E7238', '#6F8142', '#7F8C48', '#4E6232', '#8D9550'];
 const GOLD = ['#D8C27A', '#E6CF8A', '#C9AE62']; // tips backlit by the low sun
 const FLOWERS = ['#FFFBF0', '#FFF3D2', '#F4DC74', '#F2C4BA', '#DCCBEB'];
 
+// On a phone: fewer blades, a little thicker, so it still looks as full. The
+// grass was by far the costliest thing in the garden opening to draw (each
+// blade is a curved stroke, redrawn as it sways), and made cheap phones lag.
+const PHONE_DENSITY = 0.4;
+
 export function tallGrass({ top, bottom, avoid, size, camera, seed = 5 }) {
   return (w) => {
     const r = seeded(seed);
     const skip = avoid(w);
     const blades = [];
-    const count = Math.round(((bottom - top) * (w + 40)) / 30);
+    const phone = typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches ?? false);
+    const density = phone ? PHONE_DENSITY : 1;
+    const count = Math.round((((bottom - top) * (w + 40)) / 30) * density);
     for (let i = 0; i < count; i++) {
       const y = top + (bottom - top) * Math.sqrt(r()); // more of them near us
       const x = -20 + r() * (w + 40);
@@ -39,7 +46,7 @@ export function tallGrass({ top, bottom, avoid, size, camera, seed = 5 }) {
         len: (30 + r() * 34) * s * (kind > 0.84 ? 1.3 : 1),
         lean: (r() - 0.5) * 0.5,
         // widths rounded to half a px, so blades can be drawn in batches
-        width: Math.max(0.5, Math.round((0.9 + r() * 0.8) * s * 2) / 2),
+        width: Math.max(0.5, Math.round((0.9 + r() * 0.8) * s * 2 * (phone ? 1.35 : 1)) / 2),
         color: GREENS[Math.floor(r() * GREENS.length)],
         tip: r() < 0.55 ? GOLD[Math.floor(r() * GOLD.length)] : null,
         // about one in six carries a flower, one in twelve a feathery seed head
@@ -145,7 +152,7 @@ export function tallGrass({ top, bottom, avoid, size, camera, seed = 5 }) {
           }
         }
         ctx.save();
-        ctx.lineCap = 'round';
+        ctx.lineCap = phone ? 'butt' : 'round'; // (round ends cost more to draw)
         for (const [key, path] of strokes) {
           const [color, width] = key.split('|');
           ctx.strokeStyle = color;

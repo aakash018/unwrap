@@ -232,10 +232,22 @@ const scene = { editAt: 0, layers, camera };
 // One line of the names, riding the camera at its own speed.
 //   top  – where it sits (share of the screen's height)
 //   rate – how fast it flies up as you scroll (1 = as fast as the temple)
-function Plane({ top, rate, className = '', children }) {
+// `shade`: these words again, as a soft shadow behind them. (Painted once with
+// the words: a CSS drop-shadow filter is worked out again on every frame as
+// the line moves, which made the opening lag on cheaper phones.)
+function Plane({ top, rate, className = '', shade, shadeClass = '', shadow, children }) {
   return (
     <Reveal at={[-1, 0]} out={T.namesOut} rise={0} rate={rate} className={`absolute inset-x-0 flex justify-center ${className}`} style={{ top }}>
-      {children}
+      {shade ? (
+        <div className="grid">
+          <div aria-hidden="true" className={`pointer-events-none col-start-1 row-start-1 text-transparent ${shadeClass}`} style={{ textShadow: shadow }}>
+            {shade}
+          </div>
+          <div className="col-start-1 row-start-1">{children}</div>
+        </div>
+      ) : (
+        children
+      )}
     </Reveal>
   );
 }
@@ -243,7 +255,8 @@ function Plane({ top, rate, className = '', children }) {
 export default function HeroSection({ props, onChange, isEditing }) {
   const text = sectionText(props, onChange, isEditing);
   const name = 'font-caps text-foil text-[78px] leading-[0.92] font-medium uppercase tracking-[0.05em]';
-  const glow = '[filter:drop-shadow(0_4px_18px_rgba(6,10,40,0.8))]';
+  const glow = '0 4px 18px rgba(6, 10, 40, 0.8)';
+  const shade = (key) => ({ shade: props[key], shadeClass: name.replace('text-foil ', ''), shadow: glow });
 
   return (
     <StoryScene height={HERO_HEIGHT} scene={scene} background="#070D2B" start="#070D2B" edge={WATER.flat} pinned editing={isEditing}>
@@ -251,7 +264,7 @@ export default function HeroSection({ props, onChange, isEditing }) {
       <Plane top="16%" rate={1.3}>
         {text('kicker', 'font-dev text-[17px] tracking-[0.3em] text-[#E8C27A]', { singleLine: true, placeholder: 'शुभ विवाह' })}
       </Plane>
-      <Plane top="21%" rate={1.18} className={glow}>
+      <Plane top="21%" rate={1.18} {...shade('name1')}>
         {text('name1', name, { singleLine: true })}
       </Plane>
       <Plane top="30.5%" rate={1.06}>
@@ -261,7 +274,7 @@ export default function HeroSection({ props, onChange, isEditing }) {
           <span className="h-px w-14 bg-gradient-to-l from-transparent to-[#E8C27A]" />
         </div>
       </Plane>
-      <Plane top="35%" rate={0.95} className={glow}>
+      <Plane top="35%" rate={0.95} {...shade('name2')}>
         {text('name2', name, { singleLine: true })}
       </Plane>
 

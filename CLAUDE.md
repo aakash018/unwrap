@@ -24,15 +24,18 @@ Read `README.md` for setup and the folder map.
   (surprises and words in place, then changed freely), a theme, or plain.
   Ready-made gifts are in `engine/ready-made`; names for people in
   `lib/projects.ts` (READY_MADE). Once started it's a gift like any other: which
-  one it came from isn't saved. "Template" stays the word for invitations. Two so
-  far: Love, "A sky for you", and Birthday, "A garden for you" (for anyone, not
-  only a partner). Both are sweet and a little funny, with Nepali accents, and
+  one it came from isn't saved. "Template" stays the word for invitations. Three so
+  far: Love, "A sky for you"; Birthday, "A garden for you" (for anyone, not
+  only a partner); and Anniversary, "A lake for two" (a paper crane in the box:
+  cranes pair for life). Both are sweet and a little funny, with Nepali accents, and
   easter eggs that lead to each other.
 - **Easter eggs:** the Hidden message block (`blocks/secret`) is a tiny star;
   finding all of them on a page fires `unwrap:celebrate`, which ThemeLayer hands
   to the theme (`scene.celebrate`, else a few bursts). Love's own: the moon, and
   the rooftops. Birthday's own: the branches (flowers fall), the presents on the
-  grass (a balloon comes out) and the cake (its candles go out).
+  grass (a balloon comes out) and the cake (its candles go out). Anniversary's own:
+  the water (a lamp is set afloat), the boat (it rocks) and the hanging candles
+  (they swing); finding every star fills the lake with lamps.
 - **Each surprise has its own job** (founder, 25 Nov 2026: "gift box and letter
   have the same use case"). Letter = long words. Gift box = a present to unwrap,
   never words: roses, butterflies, a paper crane or a framed photo (`blocks/giftbox/presents.js`;
@@ -64,6 +67,19 @@ Read `README.md` for setup and the folder map.
   150 ms, creeps towards 92%, and fills and fades when the new page is there.
   Most moves cross between the site and the editor, which reload the whole
   page: the line stays on the old one until the new one has loaded.
+- **The wedding openings on cheap phones** (founder, 26 Nov 2026: the garden
+  hero lagged). Measured with a weak graphics chip (`--use-angle=swiftshader`):
+  8 frames a second, nearly all of it the tall grass (thousands of curved
+  strokes redrawn as they sway). On touch screens now: the grass has 40% of
+  its blades, a little thicker, plain ends (`grass.js`); layers redrawn every
+  frame are drawn every other frame and at most 1 canvas px per page px, still
+  ones at most 1.25 (`StoryScene.jsx`); still layers can be painted as one on
+  phones (`phoneGroup`, with `phoneLook`), or left out (`phone: false`): in the
+  garden, sky + sun, the three hills, lawn + stone + altar; no vignette. The
+  names' shadows are a copy of the words with a text-shadow, not a CSS
+  drop-shadow filter (worked out again every frame as they move). Result: 52
+  frames a second with the weak chip. Measure a layer's cost by stopping its
+  drawing, not by guessing.
 - **A gift opens with its loader** (founder, 26 Nov 2026: opening a gift froze,
   and the box's pictures weren't ready). `engine/page/Loader.jsx`: a fine gold bow
   draws itself over the theme's deep colour, then a line of words (default

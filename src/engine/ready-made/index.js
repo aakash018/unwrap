@@ -6,12 +6,14 @@
 // `to` and `from`), add it here, and to READY_MADE in lib/projects.ts.
 
 import { createBlock } from '../blocks';
+import anniversary from './anniversary';
 import birthday from './birthday';
 import love from './love';
 
 const READY_MADE = {
   'love-sky': { theme: 'love', elements: love },
   'birthday-garden': { theme: 'birthday', elements: birthday },
+  'anniversary-lake': { theme: 'anniversary', elements: anniversary },
 };
 
 // A place: [x, y, w], and perhaps { rotation, size, align }.

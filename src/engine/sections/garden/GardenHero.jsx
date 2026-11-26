@@ -113,6 +113,7 @@ const layers = [
     // a soft slate blue only at the very top (so the gold names still
     // read), then rose, peach and gold
     band: [0, 1700],
+    phoneGroup: 'sky', // (on phones, the sun is painted into the sky: it doesn't set)
     anchor: 'top',
     resolution: 0.4, // a soft gradient: sharpness would only cost memory
     paint(ctx, w) {
@@ -139,6 +140,7 @@ const layers = [
     // scroll down (time passing on the way to the date): it slips down
     // towards the hills, which pass in front of it
     band: [SUN_Y - 500, SUN_Y + 500],
+    phoneGroup: 'sky',
     anchor: 'top',
     resolution: 0.4,
     paint(ctx, w) {
@@ -182,6 +184,8 @@ const layers = [
     // haze, a middle one in autumn greens and golds, a near dark green one
     // (only as tall as the hills, down to where the lawn always covers them)
     band: [onHorizon(0.42) - 300 - 60, hillFoot(0.42)],
+    phoneGroup: 'hills', // (on phones, the three ranges are one picture…
+    phoneLook: slide(0.56), // …moving at the middle one's speed)
     anchor: 'top',
     resolution: 0.75, // hazy with distance: no need to be sharp
     paint(ctx, w) {
@@ -192,6 +196,7 @@ const layers = [
   {
     // (only as tall as the hills, down to where the lawn always covers them)
     band: [onHorizon(0.56) - 220 - 60, hillFoot(0.56)],
+    phoneGroup: 'hills',
     anchor: 'top',
     resolution: 0.75, // hazy with distance: no need to be sharp
     paint(ctx, w) {
@@ -202,6 +207,7 @@ const layers = [
   {
     // (only as tall as the hills, down to where the lawn always covers them)
     band: [onHorizon(0.7) - 130 - 60, hillFoot(0.7)],
+    phoneGroup: 'hills',
     anchor: 'top',
     resolution: 0.75, // hazy with distance: no need to be sharp
     paint(ctx, w) {
@@ -233,6 +239,7 @@ const layers = [
     // the lawn, the fence, the wild flowers and the stone path, down to
     // where the path is wider than the screen…
     band: [LAWN_TOP, FULL_Y + 100],
+    phoneGroup: 'ground', // (on phones, one picture with the stone and the altar: they move together)
     anchor: 'top',
     paint(ctx, w) {
       grounds(ctx, w, LAWN_TOP, PATH_TOP, FULL_Y, WORLD_BOTTOM);
@@ -243,6 +250,7 @@ const layers = [
     // …and from there on, only the path's stone: painted at half sharpness
     // (it's plain, and the stone layer of path.js soon covers it) to save memory
     band: [FULL_Y, WORLD_BOTTOM],
+    phoneGroup: 'ground',
     anchor: 'top',
     resolution: 0.5,
     paint(ctx, w) {
@@ -254,6 +262,7 @@ const layers = [
     // the altar, in the middle of the screen (drawn across the full width:
     // it's wider than the story column)
     band: [STAGE_TOP - 60, PATH_TOP + 20],
+    phoneGroup: 'ground',
     anchor: 'top',
     paint(ctx, w) {
       weddingStage(ctx, w / 2, STAGE_TOP, { column: columnFor(w) });
@@ -330,6 +339,7 @@ const layers = [
   {
     // a lens: softly darker corners
     fill: vignetteOf('60, 40, 50', 0.35),
+    phone: false, // (left out on phones: one more layer over the whole screen)
     front: true,
     look: (p) => ({ opacity: 1 - smooth(0.55, 0.7, p) }),
   },
@@ -338,10 +348,22 @@ const layers = [
 const scene = { editAt: 0, layers, camera };
 
 // One line of the names, riding the camera at its own speed.
-function Plane({ top, rate, className = '', children }) {
+// `shade`: these words again, as a soft shadow behind them. (Painted once with
+// the words: a CSS drop-shadow filter is worked out again on every frame as
+// the line moves, which made the opening lag on cheaper phones.)
+function Plane({ top, rate, className = '', shade, shadeClass = '', shadow, children }) {
   return (
     <Reveal at={[-1, 0]} out={T.namesOut} rise={0} rate={rate} className={`absolute inset-x-0 flex justify-center ${className}`} style={{ top }}>
-      {children}
+      {shade ? (
+        <div className="grid">
+          <div aria-hidden="true" className={`pointer-events-none col-start-1 row-start-1 text-transparent ${shadeClass}`} style={{ textShadow: shadow }}>
+            {shade}
+          </div>
+          <div className="col-start-1 row-start-1">{children}</div>
+        </div>
+      ) : (
+        children
+      )}
     </Reveal>
   );
 }
@@ -349,7 +371,8 @@ function Plane({ top, rate, className = '', children }) {
 export default function GardenHero({ props, onChange, isEditing }) {
   const text = sectionText(props, onChange, isEditing);
   const name = 'font-caps text-foil text-[78px] leading-[0.92] font-medium uppercase tracking-[0.05em]';
-  const shadow = '[filter:drop-shadow(0_4px_18px_rgba(30,30,60,0.8))]';
+  const shadow = '0 4px 18px rgba(30, 30, 60, 0.8)';
+  const shade = (key) => ({ shade: props[key], shadeClass: name.replace('text-foil ', ''), shadow });
 
   return (
     <StoryScene height={GARDEN_HERO_HEIGHT} scene={scene} background={SKY_TOP} start={SKY_TOP} edge={STONE} pinned editing={isEditing}>
@@ -357,7 +380,7 @@ export default function GardenHero({ props, onChange, isEditing }) {
       <Plane top="16%" rate={1.3}>
         {text('kicker', 'font-dev text-[17px] tracking-[0.3em] text-[#F3D79C]', { singleLine: true, placeholder: 'शुभ विवाह' })}
       </Plane>
-      <Plane top="21%" rate={1.18} className={shadow}>
+      <Plane top="21%" rate={1.18} {...shade('name1')}>
         {text('name1', name, { singleLine: true })}
       </Plane>
       <Plane top="30.5%" rate={1.06}>
@@ -367,7 +390,7 @@ export default function GardenHero({ props, onChange, isEditing }) {
           <span className="h-px w-14 bg-gradient-to-l from-transparent to-[#F3D79C]" />
         </div>
       </Plane>
-      <Plane top="35%" rate={0.95} className={shadow}>
+      <Plane top="35%" rate={0.95} {...shade('name2')}>
         {text('name2', name, { singleLine: true })}
       </Plane>
 

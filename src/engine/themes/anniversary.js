@@ -16,7 +16,9 @@
 //   scene     – the hanging candles, the boat, the lamps.
 //
 // Tap the water: a lamp is set afloat there and drifts away towards the far
-// shore. Tap the boat: it rocks. Swing the candles. Tap elsewhere: gold sparks.
+// shore. Tap the boat: it rocks. Tap or swing the candles. Tap elsewhere: gold
+// sparks. When every hidden message is found (celebrate), the lake fills with
+// lamps.
 //
 // (Painted in lake.js and pergola.js.)
 
@@ -210,6 +212,14 @@ export default {
       },
 
       burst(x, y) {
+        // a candle: it swings
+        for (const { strand } of hanging) {
+          const end = strand[strand.length - 1];
+          if (Math.hypot(end.x - x, end.y + 30 - y) < 46) {
+            end.px = end.x - (x < end.x ? 1 : -1) * 5;
+            return;
+          }
+        }
         const b = boatAt();
         if (Math.abs(x - b.x) < 165 * size && y > b.y - 150 * size && y < b.y + 14) {
           tiltSpeed += (x < b.x ? -1 : 1) * 0.34;
@@ -223,6 +233,18 @@ export default {
           return;
         }
         bursts.spawn(x, y, 18, () => ({ color: pick(['#E8C27A', '#FFE3A6', '#D9A04E']), size: Math.round(rand(6, 11)) }), { speed: 6, gravity: 0.14, drag: 0.06, life: 2 });
+      },
+
+      // every hidden message found: lamps set afloat all over the lake, one
+      // after another, and gold sparks over it
+      celebrate() {
+        const { view } = this;
+        for (let i = 0; i < 30; i++) setAfloat(rand(0.04, 0.96) * W, rand(24, SHORE - 120), rand(-3, 3), rand(2, 5), -i * 0.14);
+        rings.push({ x: W * 0.3, y: world.height - 90, age: 0 }, { x: W * 0.7, y: world.height - 140, age: -0.4 });
+        if (!view) return;
+        for (let i = 0; i < 4; i++) {
+          bursts.spawn((0.15 + 0.23 * i) * W, view.top + view.height * 0.25, 16, () => ({ color: pick(['#E8C27A', '#FFE3A6', '#D9A04E']), size: Math.round(rand(6, 11)) }), { speed: 6, gravity: 0.12, drag: 0.05, life: 3 });
+        }
       },
 
       draw(ctx, time) {
@@ -296,6 +318,7 @@ export default {
           }
           const y = h - l.up;
           const far = Math.min(1, (SHORE - 14 - l.up) / 30); // fades at the far shore
+          if (l.age < 0) continue; // (not set afloat yet)
           lamp(ctx, l.x, y, 0.95 * waterSize(y, h), time, l.phase, Math.min(1, l.age / 0.8) * far);
         }
         if (!boatDrawn) drawBoat();

@@ -34,6 +34,7 @@ export const DEMO_INVITATIONS: Record<string, Demo> = {
 
 export const DEMO_GIFTS: Record<string, Demo> = {
   demo: { theme: "love", readyMadeId: "love-sky", toName: "Maya", fromName: "Aaku", title: "A gift for Maya", description: "Open it when you have a quiet minute.", color: "#24123a" },
+  anniversary: { theme: "anniversary", readyMadeId: "anniversary-lake", toName: "Soni", fromName: "Aaku", title: "Happy anniversary, Soni", description: "Another year of us. There’s a lake waiting.", color: "#14394a" },
   birthday: { theme: "birthday", readyMadeId: "birthday-garden", toName: "Maya", fromName: "Aaku", title: "Happy birthday, Maya", description: "Someone made you a garden.", color: "#3d2457" },
 };
 

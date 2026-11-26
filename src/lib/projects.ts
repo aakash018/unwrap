@@ -23,6 +23,7 @@ export const THEMES: { id: ThemeId; name: string }[] = [
 export const READY_MADE: { id: ReadyMadeId; name: string; note: string }[] = [
   { id: "love-sky", name: "A sky for you", note: "Love. Roses to unwrap, notes, photos, a letter, your voice, a promise to scratch off, and three hidden messages." },
   { id: "birthday-garden", name: "A garden for you", note: "Birthday. Butterflies to let out, notes, photos, a letter, your singing, a coupon to scratch off, and candles to blow out." },
+  { id: "anniversary-lake", name: "A lake for two", note: "Anniversary. A paper crane to unwrap, notes, photos of you two, a letter, your song, a promise for the year ahead, and lamps to set afloat." },
 ];
 
 export const templateName = (id: TemplateId) => TEMPLATES.find((template) => template.id === id)?.name ?? id;

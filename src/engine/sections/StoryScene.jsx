@@ -47,6 +47,12 @@
 //       paper: 'left top',    // print this flat colour on the paper, the tile
 //                             // starting at that edge (for hand-over fades)
 //       mask: 'css gradient', // fade a fill in/out (with a CSS mask)
+//       // On phones (fewer layers: each one is painted over the screen every
+//       // frame, and a long stack made cheap phones lag):
+//       phone: false,         // leave it out on phones
+//       phoneGroup: 'hills',  // painted into ONE picture with the next layers of
+//                             // the same group (still ones, next to each other);
+//       phoneLook: (p) => …,  // …which moves like this (set on the group's first)
 //     }],
 //   }
 //
@@ -54,7 +60,7 @@
 // Give it a `rate` and it moves with the scene's camera at its own speed
 // (parallax for text).
 
-import { createContext, useContext, useEffect, useRef } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { PAGE_WIDTH, PAGE_HEIGHT } from '../config';
 import { printOnPaper, printedColor } from './paper';
 
@@ -71,6 +77,9 @@ export const PageWidthContext = createContext(PAGE_WIDTH);
 const MARGIN = 100; // extra canvas around each layer, so moving it never shows an edge
 const TRAVEL = 120; // parallax: px a depth-1 layer drifts across a flowing chapter
 const PAPER = 0.85; // how strongly the lokta paper shows in the painted scenery (0 … 1)
+const STILL_ON_PHONE = 1.25; // …and for still ones: a phone's graphics memory is small, and a
+// scene's pictures that don't fit in it are sent again every frame
+const LIVE_ON_PHONE = 1; // canvas px per page px, at most, for layers redrawn every frame on a phone
 
 export const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
 // 0 before `a`, 1 after `b`, a smooth S-curve between
@@ -132,7 +141,8 @@ export default function StoryScene({ height, scene, background, start, edge, pin
   const editingRef = useRef(editing);
   editingRef.current = editing;
 
-  const layers = scene.layers;
+  const [phone] = useState(() => window.matchMedia?.('(pointer: coarse)').matches ?? false);
+  const layers = phone ? forPhones(scene.layers) : scene.layers;
 
   // Where a layer's box sits inside the stage.
   const placeOf = (layer) => {
@@ -161,7 +171,7 @@ export default function StoryScene({ height, scene, background, start, edge, pin
         const layer = layers[i];
         const canvas = canvasRefs.current[i];
         if (!canvas) return;
-        const scale = sharpness * (layer.resolution ?? 1);
+        const scale = Math.min(phone ? STILL_ON_PHONE : Infinity, sharpness * (layer.resolution ?? 1));
         const { boxTop, height: h } = placeOf(layer);
         canvas.width = Math.round(W * scale);
         canvas.height = Math.round(h * scale);
@@ -199,6 +209,8 @@ export default function StoryScene({ height, scene, background, start, edge, pin
     let frame = 0;
     let last = performance.now();
     let time = 0;
+    let skip = false; // (a phone draws the live layers every other frame)
+    let liveDt = 0; // time since they were last drawn
 
     const tick = (now) => {
       const dt = Math.min(0.05, (now - last) / 1000);
@@ -278,13 +290,26 @@ export default function StoryScene({ height, scene, background, start, edge, pin
         el.style.transform = `translate3d(0, ${ty.toFixed(1)}px, 0) scale(${(1 + gone * grow).toFixed(3)})`;
       });
 
-      // things drawn every frame (stars, lanterns, flames, petals)
+      // things drawn every frame (stars, lanterns, flames, petals). On a phone
+      // they're drawn every other frame (30 a second: they drift slowly), at
+      // most one canvas pixel per page pixel: each one is sent to the graphics
+      // chip again every time, and cheaper phones couldn't keep up. (The scene
+      // itself still moves every frame.)
+      liveDt += dt;
+      skip = phone && !skip;
+      if (skip) {
+        frame = visible ? requestAnimationFrame(tick) : 0;
+        return;
+      }
+      const step = liveDt;
+      liveDt = 0;
       const sharpness = canvasScale(root, W);
+      const most = phone ? LIVE_ON_PHONE : Infinity;
       layers.forEach((layer, i) => {
         const live = liveRef.current[i];
         const canvas = canvasRefs.current[i];
         if (!live || !canvas || !onStage[i]) return;
-        const scale = sharpness * (layer.resolution ?? 1);
+        const scale = Math.min(most, sharpness * (layer.resolution ?? 1));
         const { boxTop, height: h } = placeOf(layer);
         const w = Math.round(W * scale);
         const hh = Math.round(h * scale);
@@ -296,7 +321,7 @@ export default function StoryScene({ height, scene, background, start, edge, pin
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, w, hh);
         ctx.setTransform(scale, 0, 0, scale, shiftOf(layer) * scale, -boxTop * scale);
-        live.draw(ctx, calm ? 0 : time, calm ? 0 : dt, p);
+        live.draw(ctx, calm ? 0 : time, calm ? 0 : step, p);
       });
 
       frame = visible ? requestAnimationFrame(tick) : 0;
@@ -401,6 +426,32 @@ export default function StoryScene({ height, scene, background, start, edge, pin
       {stage}
     </div>
   );
+}
+
+// A scene's layers on a phone: those marked `phone: false` left out, and still
+// ones next to each other with the same `phoneGroup` painted as one.
+const merged = new WeakMap(); // (made once per scene)
+function forPhones(layers) {
+  if (merged.has(layers)) return merged.get(layers);
+  const out = [];
+  for (const layer of layers) {
+    if (layer.phone === false) continue;
+    const last = out.at(-1);
+    if (layer.phoneGroup && layer.paint && last?.phoneGroup === layer.phoneGroup && last.paint && !layer.centered && !last.centered) {
+      const members = [...(last.members ?? [last]), layer];
+      const band = [Math.min(...members.map((m) => m.band?.[0] ?? 0)), Math.max(...members.map((m) => m.band?.[1] ?? Infinity))];
+      out[out.length - 1] = {
+        ...members[0],
+        members,
+        band: Number.isFinite(band[1]) ? band : undefined,
+        look: members[0].phoneLook ?? members[0].look,
+        resolution: Math.max(...members.map((m) => m.resolution ?? 1)),
+        paint: (ctx, w, h, ...rest) => members.forEach((m) => m.paint(ctx, w, h, ...rest)),
+      };
+    } else out.push(layer.phoneLook && layer.phoneGroup ? { ...layer, look: layer.phoneLook } : layer);
+  }
+  merged.set(layers, out);
+  return out;
 }
 
 // How sharp to paint canvases: the page's on-screen size × the screen's
