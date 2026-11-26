@@ -80,6 +80,13 @@ Read `README.md` for setup and the folder map.
   drop-shadow filter (worked out again every frame as they move). Result: 52
   frames a second with the weak chip. Measure a layer's cost by stopping its
   drawing, not by guessing.
+  Then the founder still saw lag and the background colour while scrolling on
+  the phone: the address bar sliding in and out changed the window's height,
+  and an invitation's opening repainted all its pictures each time (gifts
+  already ignored it). Now `page/Viewer.jsx` gives phones the full screen
+  height (100lvh) and keeps it while the width stays the same. The phone
+  simulation can't show an address bar: test it by changing the emulated
+  height mid-scroll and counting repaints.
 - **A gift opens with its loader** (founder, 26 Nov 2026: opening a gift froze,
   and the box's pictures weren't ready). `engine/page/Loader.jsx`: a fine gold bow
   draws itself over the theme's deep colour, then a line of words (default

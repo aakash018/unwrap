@@ -16,17 +16,35 @@ import { THEMES } from '../themes';
 import { toPage } from './saved';
 import { markMounted } from './ready';
 
-// The visible size of the window (without any scrollbar). With `keepHeight`, a
-// phone's address bar sliding away changes nothing: a gift's balloons and
-// lanterns would start over each time.
-function useWindowSize(keepHeight) {
-  const read = () => ({ width: document.documentElement.clientWidth, height: window.innerHeight });
-  const [size, setSize] = useState(read);
+// The visible size of the window (without any scrollbar). On a phone the
+// height is the screen's full height (with the address bar slid away), and
+// it stays put while the width does: the bar sliding in and out as you scroll
+// must change nothing. (It used to make a wedding's opening repaint all its
+// pictures each time: the page lurched, and its background colour showed.)
+function fullHeight() {
+  // 100lvh: the viewport as tall as it gets, with the browser's bars hidden
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;top:0;height:100lvh;width:0;visibility:hidden;pointer-events:none';
+  document.body.append(probe);
+  const tall = probe.offsetHeight;
+  probe.remove();
+  return Math.max(tall || 0, window.innerHeight);
+}
+
+function useWindowSize() {
+  const [size, setSize] = useState(() => {
+    const touch = window.matchMedia('(pointer: coarse)').matches;
+    return { width: document.documentElement.clientWidth, height: touch ? fullHeight() : window.innerHeight };
+  });
   useEffect(() => {
     const touch = window.matchMedia('(pointer: coarse)').matches;
     const update = () => {
-      const next = read();
-      setSize((prev) => keepHeight && touch && prev.width === next.width ? prev : (prev.width === next.width && prev.height === next.height ? prev : next));
+      const width = document.documentElement.clientWidth;
+      setSize((prev) => {
+        if (touch) return prev.width === width ? prev : { width, height: fullHeight() }; // (turned round)
+        const height = window.innerHeight;
+        return prev.width === width && prev.height === height ? prev : { width, height };
+      });
     };
     window.addEventListener('resize', update);
     // a scrollbar appearing/disappearing changes the width too
@@ -36,13 +54,13 @@ function useWindowSize(keepHeight) {
       window.removeEventListener('resize', update);
       observer.disconnect();
     };
-  }, [keepHeight]);
+  }, []);
   return size;
 }
 
 export default function Viewer({ saved }) {
   const isGift = saved.kind === 'gift';
-  const { width, height } = useWindowSize(isGift);
+  const { width, height } = useWindowSize();
 
   // the page glides when scrolled with a mouse wheel or trackpad
   useEffect(() => enableSmoothScroll(), []);
