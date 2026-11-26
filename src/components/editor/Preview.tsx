@@ -1,22 +1,22 @@
-// The preview of an invitation or gift: its draft, drawn as people will see it.
+// The preview of an invitation or gift: its draft, drawn as people will see
+// it. It follows the editor's changes as they're made (engine/preview/channel.js).
 "use client";
 
 import dynamic from "next/dynamic";
-import { previewUrl, type Gift, type Invitation, type Kind } from "@/lib/projects";
-import Message from "./Message";
-import NotOpened from "./NotOpened";
-import { useDraft } from "./use-draft";
+import type { Saved } from "@/engine/page/types";
+import { previewUrl, type Kind } from "@/lib/projects";
 
 const PlainPreview = dynamic(() => import("@/engine/preview/Preview"), { ssr: false });
 const DevicePreview = dynamic(() => import("@/engine/preview/DevicePreview"), { ssr: false });
 
-type Props = { owner: string; kind: Kind; id: string; sample: Invitation | Gift | null; framed: boolean };
+type Props = { kind: Kind; id: string; saved: Saved; toName?: string; edited: number; framed: boolean };
 
-export default function Preview({ owner, kind, id, sample, framed }: Props) {
-  const opened = useDraft(owner, kind, id, sample);
+// (`edited` is the server's time, the editor's changes this computer's: a
+// little slack, in case the two clocks differ)
+const SLACK_MS = 120_000;
 
-  if (opened.state === "opening") return <Message title="Opening…" />;
-  if (opened.state !== "open") return <NotOpened kind={kind} state={opened.state} />;
-  if (framed) return <PlainPreview saved={opened.saved} since={opened.edited} channel={id} toName={opened.toName} />;
-  return <DevicePreview saved={opened.saved} since={opened.edited} channel={id} framedUrl={`${previewUrl(kind, id)}?framed`} toName={opened.toName} />;
+export default function Preview({ kind, id, saved, toName, edited: savedAt, framed }: Props) {
+  const edited = savedAt - SLACK_MS;
+  if (framed) return <PlainPreview saved={saved} since={edited} channel={id} toName={toName} />;
+  return <DevicePreview saved={saved} since={edited} channel={id} framedUrl={`${previewUrl(kind, id)}?framed`} toName={toName} />;
 }

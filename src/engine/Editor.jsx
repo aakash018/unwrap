@@ -81,11 +81,11 @@ export default function Editor({ saved, onChange, previewUrl, channel, onHome, s
 
   // Tell whoever shows us about every change (selecting isn't a change).
   const latest = useRef(saved);
-  const { kind, template, theme, background } = page;
+  const { kind, template, theme, background, opening } = page;
   const told = useRef(false);
   const changedAt = useRef(0); // when
   useEffect(() => {
-    latest.current = toSaved({ kind, template, theme, background, blocks });
+    latest.current = toSaved({ kind, template, theme, background, opening, blocks });
     if (told.current) {
       changedAt.current = Date.now();
       onChange(latest.current);
@@ -95,7 +95,7 @@ export default function Editor({ saved, onChange, previewUrl, channel, onHome, s
     // every pixel of a drag.
     const timer = setTimeout(() => sendPage(channel, latest.current, changedAt.current), 150);
     return () => clearTimeout(timer);
-  }, [kind, template, theme, background, blocks, onChange, channel]);
+  }, [kind, template, theme, background, opening, blocks, onChange, channel]);
 
   // …and answer a newly opened preview at once.
   useEffect(() => answerPreviews(channel, () => ({ saved: latest.current, at: changedAt.current })), [channel]);

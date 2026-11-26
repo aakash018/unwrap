@@ -1,5 +1,5 @@
 // Making an invitation or a gift: opens its draft in the engine's editor and
-// keeps it saved in this browser.
+// keeps it saved in the database (a moment after each change: app/projects/actions.ts).
 "use client";
 
 import dynamic from "next/dynamic";
@@ -7,23 +7,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startProgress } from "@/components/PageProgress";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { saveDraft } from "@/app/projects/actions";
 import type { Saved } from "@/engine/page/types";
-import { saveDraft } from "@/lib/drafts";
-import { previewUrl, type Gift, type Invitation, type Kind } from "@/lib/projects";
+import { previewUrl, type Kind } from "@/lib/projects";
 import Message from "./Message";
-import NotOpened from "./NotOpened";
-import { useDraft } from "./use-draft";
 
 const Editor = dynamic(() => import("@/engine/Editor"), { ssr: false });
 
 const PAUSE_MS = 500; // save this long after the last change
 
-type Props = { owner: string; kind: Kind; id: string; sample: Invitation | Gift | null };
+type Props = { kind: Kind; id: string; saved: Saved; toName?: string };
 
-export default function Edit({ owner, kind, id, sample }: Props) {
-  const opened = useDraft(owner, kind, id, sample);
-  const toName = opened.state === "open" ? opened.toName : undefined;
-
+export default function Edit({ kind, id, saved: first }: Props) {
   const router = useRouter();
   const [status, setStatus] = useState("");
   const unsaved = useRef<Saved | null>(null); // the latest version, until it's saved
@@ -34,15 +29,20 @@ export default function Edit({ owner, kind, id, sample }: Props) {
     const saved = unsaved.current;
     if (!saved) return;
     try {
-      await saveDraft(owner, id, saved, toName);
+      const result = await saveDraft(id, saved);
+      if (!result.ok) {
+        setStatus(`Not saved! ${result.problem}`);
+        return;
+      }
       if (unsaved.current !== saved) return; // changed again meanwhile
       unsaved.current = null;
       setStatus("Saved");
     } catch (problem) {
+      // (no connection, most likely: it's tried again with the next change)
       console.error("The draft wasn't saved:", problem);
-      setStatus("Not saved!");
+      setStatus("Not saved! Check your connection.");
     }
-  }, [owner, id, toName]);
+  }, [id]);
 
   const onChange = useCallback(
     (saved: Saved) => {
@@ -71,14 +71,11 @@ export default function Edit({ owner, kind, id, sample }: Props) {
     };
   }, [save]);
 
-  if (opened.state === "opening") return <Message title="Opening…" />;
-  if (opened.state !== "open") return <NotOpened kind={kind} state={opened.state} />;
-
   return (
     <>
       <div className="hidden md:block">
         <Editor
-          saved={opened.saved}
+          saved={first}
           onChange={onChange}
           previewUrl={previewUrl(kind, id)}
           channel={id}

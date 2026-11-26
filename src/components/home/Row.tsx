@@ -1,14 +1,16 @@
 // One line in a list on Home: a small picture, a title, a few facts, and a
-// menu. The whole line opens it.
+// menu (edit, preview, publish, its link…). The whole line opens it.
+"use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import type { TemplateId, ThemeId } from "@/engine/page/types";
 import { editUrl, previewUrl, type Kind, type Status } from "@/lib/projects";
 import Cover from "./Cover";
 import Icon from "./Icon";
 import Menu, { MENU_ITEM } from "./Menu";
 import NotYetButton from "./NotYetButton";
+import Publish from "./Publish";
 import { ROUND } from "./styles";
 
 const STATUS: Record<Status, { name: string; dot: string }> = {
@@ -26,13 +28,16 @@ type Props = {
   about: string; // after that
   facts: ReactNode; // in the middle, on wide screens
   status: Status;
-  sample?: boolean;
+  slug?: string; // once published
+  changed: boolean; // edited since it was published
   notYet: [string, string][]; // [what the menu says, what isn't ready yet]
   onDelete: () => void;
 };
 
-export default function Row({ kind, id, cover, title, design, about, facts, status, sample, notYet, onDelete }: Props) {
+export default function Row({ kind, id, cover, title, design, about, facts, status, slug, changed, notYet, onDelete }: Props) {
   const past = status === "past";
+  const publishBox = useRef<HTMLDialogElement>(null);
+  const openPublish = () => publishBox.current?.showModal();
   const statusLine = (
     <>
       <span aria-hidden="true" className={`size-2 rounded-full ${STATUS[status].dot}`} />
@@ -55,7 +60,6 @@ export default function Row({ kind, id, cover, title, design, about, facts, stat
           >
             {title}
           </Link>
-          {sample && <span className="shrink-0 text-xs font-normal text-soft">Sample</span>}
         </h3>
         <p className="mt-0.5 text-sm text-soft">
           {design && <span className="max-sm:hidden">{design} · </span>}
@@ -78,18 +82,32 @@ export default function Row({ kind, id, cover, title, design, about, facts, stat
           <Link href={previewUrl(kind, id)} prefetch={false} target="_blank" className={MENU_ITEM}>
             Preview
           </Link>
+          {!slug && (
+            <button type="button" onClick={openPublish} className={MENU_ITEM}>
+              Publish
+            </button>
+          )}
+          {slug && changed && !past && (
+            <button type="button" onClick={openPublish} className={MENU_ITEM}>
+              Publish changes
+            </button>
+          )}
+          {slug && (
+            <button type="button" onClick={openPublish} className={MENU_ITEM}>
+              Share link
+            </button>
+          )}
           {notYet.map(([name, what]) => (
             <NotYetButton key={name} what={what} className={MENU_ITEM}>
               {name}
             </NotYetButton>
           ))}
-          {!sample && (
-            <button type="button" onClick={onDelete} className={`${MENU_ITEM} text-wine`}>
-              Delete
-            </button>
-          )}
+          <button type="button" onClick={onDelete} className={`${MENU_ITEM} text-wine`}>
+            Delete
+          </button>
         </Menu>
       </div>
+      <Publish ref={publishBox} kind={kind} id={id} title={title} slug={slug} changed={changed} />
     </li>
   );
 }

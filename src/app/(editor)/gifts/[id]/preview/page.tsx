@@ -4,9 +4,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Preview from "@/components/editor/Preview";
-import { today } from "@/lib/dates";
+import { loadProject } from "@/lib/project-store";
 import { isProjectId, previewUrl } from "@/lib/projects";
-import { sampleGifts } from "@/lib/samples";
 import { requireUser } from "@/lib/user";
 
 export const metadata: Metadata = { title: "Preview" };
@@ -16,7 +15,8 @@ export default async function PreviewPage({ params, searchParams }: PageProps<"/
   if (!isProjectId(id)) notFound();
   const { framed } = await searchParams;
 
-  const user = await requireUser(previewUrl("gift", id));
-  const sample = sampleGifts(today()).find((one) => one.id === id) ?? null;
-  return <Preview owner={user.id} kind="gift" id={id} sample={sample} framed={framed !== undefined} />;
+  await requireUser(previewUrl("gift", id));
+  const project = await loadProject(id);
+  if (project?.kind !== "gift") notFound();
+  return <Preview kind="gift" id={id} saved={project.saved} toName={project.toName} edited={project.edited} framed={framed !== undefined} />;
 }

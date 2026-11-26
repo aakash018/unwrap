@@ -6,8 +6,7 @@ import { useRouter } from "next/navigation";
 import { startProgress } from "@/components/PageProgress";
 import { useRef, useState, type FormEvent } from "react";
 import type { ReadyMadeId, ThemeId } from "@/engine/page/types";
-import { newId } from "@/engine/utils/newId";
-import { saveDraft } from "@/lib/drafts";
+import { startProject } from "@/app/projects/actions";
 import { editUrl, READY_MADE, THEMES } from "@/lib/projects";
 import Cover from "./Cover";
 import Dialog from "./Dialog";
@@ -15,7 +14,7 @@ import { INPUT, PRIMARY } from "./styles";
 
 const CHOICE = "block rounded-md outline-offset-3 peer-checked:outline-2 peer-checked:outline-ink peer-focus-visible:outline-wine";
 
-export default function NewGift({ owner, name }: { owner: string; name: string }) {
+export default function NewGift({ name }: { name: string }) {
   const box = useRef<HTMLDialogElement>(null);
   const router = useRouter();
   const [state, setState] = useState<"" | "starting" | "failed">("");
@@ -29,12 +28,12 @@ export default function NewGift({ owner, name }: { owner: string; name: string }
     setState("starting");
     try {
       const { startGift } = await import("@/engine/templates/start");
-      const id = newId();
       const names = { toName, fromName: word("from") };
       const gift = from === "ready" ? startGift({ readyMadeId: choice as ReadyMadeId, ...names }) : startGift({ theme: choice as ThemeId, ...names });
-      await saveDraft(owner, id, gift, toName || undefined);
+      const made = await startProject(gift);
+      if (!made.ok) return setState("failed");
       startProgress();
-      router.push(editUrl("gift", id));
+      router.push(editUrl("gift", made.id));
     } catch (problem) {
       console.error("The gift wasn't made:", problem);
       setState("failed");

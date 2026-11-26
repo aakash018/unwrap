@@ -5,14 +5,13 @@ import { useRouter } from "next/navigation";
 import { startProgress } from "@/components/PageProgress";
 import { useRef, useState, type FormEvent } from "react";
 import type { TemplateId } from "@/engine/page/types";
-import { newId } from "@/engine/utils/newId";
-import { saveDraft } from "@/lib/drafts";
+import { startProject } from "@/app/projects/actions";
 import { editUrl, TEMPLATES } from "@/lib/projects";
 import Cover from "./Cover";
 import Dialog from "./Dialog";
 import { INPUT, PRIMARY } from "./styles";
 
-export default function NewInvitation({ owner }: { owner: string }) {
+export default function NewInvitation() {
   const box = useRef<HTMLDialogElement>(null);
   const router = useRouter();
   const [state, setState] = useState<"" | "starting" | "failed">("");
@@ -24,10 +23,10 @@ export default function NewInvitation({ owner }: { owner: string }) {
     setState("starting");
     try {
       const { startInvitation } = await import("@/engine/templates/start");
-      const id = newId();
-      await saveDraft(owner, id, startInvitation(word("template") as TemplateId, [word("name1"), word("name2")]));
+      const made = await startProject(startInvitation(word("template") as TemplateId, [word("name1"), word("name2")]));
+      if (!made.ok) return setState("failed");
       startProgress();
-      router.push(editUrl("invitation", id));
+      router.push(editUrl("invitation", made.id));
     } catch (problem) {
       console.error("The invitation wasn't made:", problem);
       setState("failed");

@@ -23,6 +23,8 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ownAddresses,
   poweredByHeader: false,
   headers: async () => [{ source: "/:path*", headers: securityHeaders }],
+  // A draft is saved whole, photos and all (lib/project-store.ts: MOST_BYTES)
+  experimental: { serverActions: { bodySizeLimit: "10mb" } },
   // Tailwind CSS, compiled by Turbopack
   turbopack: {
     root: import.meta.dirname, // this folder (not a package-lock.json further up)

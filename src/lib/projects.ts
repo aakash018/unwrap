@@ -37,14 +37,14 @@ type Project = {
   title: string;
   status: Status;
   edited: string; // a day
-  sample?: boolean; // made up, not yours
+  slug?: string; // its link's, once published
+  changed: boolean; // edited since it was published
 };
 
 export type Invitation = Project & {
   kind: "invitation";
   template: TemplateId;
   eventDay?: string;
-  guests?: { invited: number; replied: number; coming: number };
 };
 
 export type Gift = Project & {
@@ -53,8 +53,15 @@ export type Gift = Project & {
   toName?: string;
 };
 
-// Ids are only ever letters, digits and dashes.
-export const isProjectId = (id: string) => /^[A-Za-z0-9-]{1,64}$/.test(id);
+// Ids are the database's (uuids).
+export const isProjectId = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+// The link people open, once it's published: /g/… for a gift, /i/… for an invitation.
+export const shareUrl = (kind: Kind, slug: string) => `/${kind === "gift" ? "g" : "i"}/${slug}`;
+
+// Draft until it's published; an invitation's day over, it's past.
+export const statusOf = ({ kind, publishedAt, eventDay }: { kind: Kind; publishedAt?: string; eventDay?: string }, today: string): Status =>
+  !publishedAt ? "draft" : kind === "invitation" && eventDay && eventDay < today ? "past" : "live";
 
 export const editUrl = (kind: Kind, id: string) => `/${kind}s/${id}/edit`;
 export const previewUrl = (kind: Kind, id: string) => `/${kind}s/${id}/preview`;

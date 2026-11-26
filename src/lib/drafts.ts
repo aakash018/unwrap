@@ -1,5 +1,6 @@
-// What people are making, kept in this browser (in IndexedDB, which has room
-// for photos). Each account has its own. It moves to the database later.
+// Drafts kept in this browser (IndexedDB), from before they were saved in the
+// database (26 Nov 2026). Only read now, to move them into the account
+// (components/home/MoveDrafts.tsx), and deleted once they're there.
 
 import { upgrade } from "@/engine/page/format";
 import type { Saved } from "@/engine/page/types";
@@ -46,16 +47,6 @@ async function inStore<T>(mode: IDBTransactionMode, action: (store: IDBObjectSto
   } finally {
     db.close();
   }
-}
-
-export async function loadDraft(owner: string, id: string): Promise<Draft | null> {
-  const stored = await inStore<Stored | undefined>("readonly", (store) => store.get(keyOf(owner, id)));
-  return stored ? upToDate(stored) : null;
-}
-
-export async function saveDraft(owner: string, id: string, saved: Saved, toName?: string): Promise<void> {
-  const draft: Draft = { key: keyOf(owner, id), owner, id, saved, toName, edited: Date.now() };
-  await inStore("readwrite", (store) => store.put(draft));
 }
 
 export async function deleteDraft(owner: string, id: string): Promise<void> {

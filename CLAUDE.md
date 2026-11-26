@@ -162,9 +162,15 @@ Read `README.md` for setup and the folder map.
   - ESLint has lighter rules there, but `no-undef` is an error.
 - **Editor:** private, computers only. `engine/Editor.jsx` loads and saves
   nothing itself; `components/editor/Edit.tsx` gives it a page and saves every
-  change half a second later. Drafts are in the browser (IndexedDB, per
-  account) until they move to Supabase. A draft that can't be READ is never
-  replaced by a fresh page. Two tabs editing one draft overwrite each other
+  change half a second later, through a server action (`app/projects/actions.ts`
+  → `lib/project-store.ts`, the only code that touches the `projects` table).
+  The edit and preview pages load the draft on the server (404 if it isn't
+  yours). Photos are still kept inside the draft, made small when added
+  (`engine/utils/readFileAsDataURL.js`: 1600 px, WebP); a save may be up to
+  10 MB (`bodySizeLimit` in next.config, `MOST_BYTES`, the database's
+  check). Drafts made before 26 Nov 2026 were in the browser (IndexedDB):
+  Home moves them into the account once (`MoveDrafts.tsx`) and deletes each
+  from the browser when it's saved. Two tabs editing one draft overwrite each other
   (last one wins); the preview passes over pages older than the saved draft. Removing a chapter asks first; putting it back restores
   its place and its first words. Text typed on the page keeps its letters
   (`readText` in EditableText).
@@ -190,15 +196,45 @@ Read `README.md` for setup and the folder map.
 - **Theme layer:** the live canvas is only as tall as the screen and follows the
   scroll (`ThemeLayer.jsx`): whole-page
   drawing every frame isn't possible there. Swiping scrolls; tapping bursts.
-- **Home (`/home`)** is two plain lists, your drafts first, then the samples
-  (`lib/samples.ts`; `/home?sample=empty` hides them). Buttons without a
-  feature use `NotYetButton`, which says so.
+- **Home (`/home`)** is two plain lists, read from the database on the server
+  (the made-up samples are gone). A row's menu: Edit, Preview, Publish (the
+  first time with an activation code), Publish changes (once it's been edited
+  since), Share link (copy it) and Delete; all in `Row.tsx` + `Publish.tsx`.
+  Status: draft until published; an invitation is past after its day. Buttons
+  without a feature (Guests, Take offline) use `NotYetButton`, which says so.
+- **Links:** `/g/…` (gifts) and `/i/…` (invitations) open the built-in demos
+  (`lib/demos.ts`) or else the published page (`open_page`), with a link
+  preview worked out from it (`previewOf` in link-preview.ts).
 - **Look** (founder, 25 Nov 2026: the first dashboard was "very very bad", the
   second "childish and trash", to come back to later): white page, plain
   lists, Hanken Grotesk only, ink with one accent (`wine`) and `leaf` for
   live. No beige, cards, badges, boxes in boxes or sidebar.
-- **Planned:** save drafts, photo uploads, publish with an activation code,
-  guest links and RSVP. No payment gateway. Database writes go through the
+- **Database** (`supabase/migrations/20261126120000_first_tables.sql`, 26 Nov
+  2026; applied to Supabase the same day; `projects` and publishing are used by
+  the app, the rest (guests, RSVP, blessings, opens, media) not yet. Later
+  files in supabase/migrations: drafts up to 10 MB; a code stays used even if
+  its project is deleted (it used to be freed, so one code could be reused).
+  The database is reached through the IPv4 pooler: host
+  `aws-1-ap-southeast-2.pooler.supabase.com`, port 5432, user
+  `postgres.<project ref>`, password `SUPABASE_DB_PASSWORD` in .env.local (the
+  direct `db.<ref>.supabase.co` is IPv6 only, unreachable from this Mac). Run
+  new migrations with psql `--single-transaction`; there's no Supabase CLI
+  here): `projects` (the page as one JSON document:
+  `draft`, and `published`, the frozen copy people see), `activation_codes`
+  (sold by hand; the first publish needs one of the right kind, after that the
+  project keeps it), `media`, `guests` (personal links, `seats`), `rsvps` (one
+  a household: phone, veg / non-veg counts, `edit_key` to change it) +
+  `rsvp_events` (each ceremony: coming, how many), `blessings`, `opens`.
+  Row-level security on everything: senders read and change only their own;
+  `published`/`slug` only through `publish()`. Guests are never signed in and
+  never touch a table: the server calls `open_page`, `note_open`, `send_rsvp`
+  and `send_blessing` (security definer functions that check everything) with
+  the publishable key, so there is no secret key in the app. RSVP happens on
+  the invitation itself (founder: "no need to go to Viber or WhatsApp"): a
+  "Reply by" date replaces the WhatsApp link; ceremonies need an `id` each in
+  the events chapter for it (not added yet).
+- **Planned:** photo uploads (Storage), guest links and RSVP, taking a link
+  offline. No payment gateway. Database writes go through the
   server only.
 
 Keep `README.md` and this file up to date.
