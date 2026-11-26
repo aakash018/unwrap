@@ -6,16 +6,18 @@
 //   <Loader theme name words>{the gift}</Loader>
 //
 // It's plain markup and CSS (index.css: .gift-loader), so it's on the screen
-// before any code has loaded. It waits at least long enough for the bow to
-// be drawn, and never more than CAP: then the gift shows anyway and goes on
-// loading by itself.
+// before any code has loaded. It always stays at least SHORTEST (founder,
+// 26 Nov 2026: "at least 4 s no matter what"), then for as long as the gift
+// is still loading. Something that fails counts as done (ready.js); only
+// something that never finishes at all (a stuck connection) hits CAP, and
+// then the gift shows anyway and goes on loading by itself.
 'use client';
 
 import { useEffect, useState } from 'react';
 import { watchReady, holdOpen } from './ready';
 
-const SHORTEST = 2600; // ms: the bow drawn, the words in, a moment to read them
-const CAP = 6000; // ms after the link was opened: then show the gift anyway
+const SHORTEST = 4000; // ms after the link was opened: always at least this
+const CAP = 20000; // ms after the link was opened: only for something stuck
 const LEAVING = 1300; // ms: the bow coming undone
 
 // The words above the name, unless the sender wrote their own.

@@ -119,9 +119,10 @@ Read `README.md` for setup and the folder map.
   a large कोसेली. It's markup + CSS (index.css, `.gift-loader`), so it's in the
   first HTML. Behind it everything loads: anything slow says so with
   `holdOpen(promise)` (`page/ready.js`): the theme's still pictures, each gift
-  box's pictures, films and petals. It opens when all are done (at least 2.6 s,
-  so it can be read), or 6 s after the link was opened, whatever is still
-  loading; a box tapped before its films are here wiggles until they are. The
+  box's pictures, films and petals. It always stays at least 4 s after the
+  link was opened (founder, 26 Nov 2026: "no matter what"), then until all are
+  done; something that fails counts as done, and only something stuck opens it
+  at 20 s anyway; a box tapped before its films are here wiggles until they are. The
   bow comes undone, the words drift up, the gift shows through. The name and
   words are saved with the gift (`opening: { name, words }`), set in the editor's
   "Opening" section with one-tap suggestions; the editor's Preview shows the
