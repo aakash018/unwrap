@@ -3,7 +3,7 @@
 //   front – over the box: the silk, the shadows, and the lid until it's past the rim
 //   rear  – behind the present: the lid standing open, and the light on it
 //
-//   createOpening({ front, rear, color }) → { untie(), open(), close(), settle(step), stop() }
+//   createOpening({ front, rear, color }) → { untie(), open(), close(), settle(step), stop(), free() }
 //   untie, open and close are promises; settle(step) goes straight to 0 tied,
 //   1 untied or 2 open.
 
@@ -116,6 +116,11 @@ export function createOpening({ front, rear, color }) {
 
   return {
     stop,
+    // give the canvases' memory back (phones need it), once the box is gone
+    free() {
+      stop();
+      for (const canvas of [front, rear]) [canvas.width, canvas.height] = [0, 0];
+    },
     draw,
     settle(step) {
       stop();

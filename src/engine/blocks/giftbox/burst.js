@@ -10,8 +10,17 @@ const PETAL_COUNT = 54;
 const DUST_COUNT = 46;
 const rand = (a, b) => a + Math.random() * (b - a);
 
-// The rendered petals, each dyed one of the kind's colours.
-async function dyed(kind) {
+// The rendered petals, each dyed one of the kind's colours: made once for each
+// kind, then kept (phones run out of room for canvases).
+const made = new Map();
+const dyed = (kind) => {
+  if (!made.has(kind)) made.set(kind, dye(kind).then((pictures) => ({ pictures, blurred: pictures.map(soft) })).catch((error) => {
+    made.delete(kind);
+    throw error;
+  }));
+  return made.get(kind);
+};
+async function dye(kind) {
   const { colors, picture } = PETALS[kind] ?? PETALS.marigold;
   const shapes = await Promise.all(
     [0, 1, 2].map(async (i) => {
@@ -47,34 +56,34 @@ async function dyed(kind) {
 
 // Far ones are small; a few, near the eye, are big and out of focus.
 function soft(picture) {
-  // (shrunk, then enlarged a little at a time: that blurs it, in every browser)
-  let from = picture;
-  for (const size of [14, 22, 36, 60, 100]) {
-    const c = document.createElement('canvas');
-    [c.width, c.height] = [size, size];
-    const ctx = c.getContext('2d');
-    ctx.imageSmoothingQuality = 'high';
-    const edge = from === picture ? 3 : 0; // room for the blur
-    ctx.drawImage(from, edge, edge, size - edge * 2, size - edge * 2);
-    from = c;
-  }
-  return from;
+  // (shrunk, then enlarged: that blurs it, in every browser)
+  const tiny = document.createElement('canvas');
+  [tiny.width, tiny.height] = [16, 16];
+  tiny.getContext('2d').drawImage(picture, 3, 3, 10, 10);
+  const c = document.createElement('canvas');
+  [c.width, c.height] = [48, 48];
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(tiny, 0, 0, 48, 48);
+  [tiny.width, tiny.height] = [0, 0];
+  return c;
 }
 
 export async function burst(anchor, kind) {
   if (calm()) return;
   const layer = pageLayer(anchor);
   if (!layer) return;
-  const pictures = await dyed(kind).catch(() => null);
-  if (!pictures) return layer.remove();
-  const blurred = pictures.map(soft);
+  const ready = await dyed(kind).catch(() => null);
+  if (!ready) return layer.remove();
+  const { pictures, blurred } = ready;
+  const phone = window.matchMedia?.('(pointer: coarse)').matches;
 
   const mouth = layer.rectOf(anchor);
   const k = mouth.w / 220; // the box may be bigger, or smaller
   const [W, H] = [Math.min(layer.width(), 900 * k), 1080 * k];
   const left = Math.max(0, Math.min(layer.width() - W, mouth.x + mouth.w / 2 - W / 2));
   const top = mouth.y - 560 * k;
-  const dpr = Math.min(1.5, window.devicePixelRatio || 1);
+  const dpr = Math.min(phone ? 1.25 : 1.5, window.devicePixelRatio || 1);
   const canvas = document.createElement('canvas');
   [canvas.width, canvas.height] = [W * dpr, H * dpr];
   Object.assign(canvas.style, { position: 'absolute', left: `${left}px`, top: `${top}px`, width: `${W}px`, height: `${H}px` });
@@ -82,7 +91,7 @@ export async function burst(anchor, kind) {
   const ctx = canvas.getContext('2d');
   const [cx, cy] = [mouth.x + mouth.w / 2 - left, mouth.y + mouth.h / 2 - top];
 
-  const petals = Array.from({ length: PETAL_COUNT }, (_, i) => {
+  const petals = Array.from({ length: phone ? 38 : PETAL_COUNT }, (_, i) => {
     const near = i % 9 === 0;
     const depth = near ? rand(1.7, 2.3) : rand(0.6, 1.2);
     const which = Math.floor(Math.random() * pictures.length);
@@ -107,7 +116,7 @@ export async function burst(anchor, kind) {
       age: 0,
     };
   });
-  const dust = Array.from({ length: DUST_COUNT }, () => ({
+  const dust = Array.from({ length: phone ? 26 : DUST_COUNT }, () => ({
     wait: rand(0, 0.9),
     x: cx + rand(-0.42, 0.42) * mouth.w,
     y: cy + rand(-4, 12) * k,
@@ -177,7 +186,10 @@ export async function burst(anchor, kind) {
       ctx.restore();
     }
     if (alive) requestAnimationFrame(tick);
-    else layer.remove();
+    else {
+      [canvas.width, canvas.height] = [0, 0]; // (gives its memory back now)
+      layer.remove();
+    }
   };
   requestAnimationFrame(tick);
 }

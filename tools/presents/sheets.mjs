@@ -67,10 +67,12 @@ await save(picture(await shadow(raw('ground'), raw('floor0'), 336, 304, FLOOR), 
 // ── films: each frame cut down to what's on it, all packed into one picture.
 // Where each is goes in films.js: [x, y, w, h in the picture, x, y in the frame] ──
 const films = {};
-async function film(out, frames, w, h, place, quality, alphaQuality) {
+async function film(out, frames, fullW, fullH, place, quality, alphaQuality, size = 1) {
   const ATLAS = 2400;
+  const [w, h] = [Math.round(fullW * size), Math.round(fullH * size)];
   const cut = [];
-  for (const data of frames) {
+  for (let data of frames) {
+    if (size !== 1) data = await picture(data, fullW, fullH).resize(w, h, { kernel: 'lanczos3' }).raw().toBuffer();
     let [x0, y0, x1, y1] = [w, h, 0, 0];
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (data[(y * w + x) * 4 + 3] > 5) [x0, y0, x1, y1] = [Math.min(x0, x), Math.min(y0, y), Math.max(x1, x + 1), Math.max(y1, y + 1)];
     if (x1 <= x0) [x0, y0, x1, y1] = [0, 0, 1, 1];
@@ -88,9 +90,16 @@ async function film(out, frames, w, h, place, quality, alphaQuality) {
 }
 const several = (count, make) => Promise.all(Array.from({ length: count }, (_, i) => make(i)));
 // (a film's place: x, y, w, h in the box's own px, where it's 300 × 330)
-await film('film-silk', await several(58, (i) => silk(`silk${i}`)), 672, 608, [-60, 0, 420, 380], 68, 70);
-await film('film-silk-shade', await several(58, async (i) => over(await shadow(raw('plain'), raw(`shade${i}`), 336, 304, { blur: 1.8, from: 9 }), outside(await shadow(raw('floor0'), raw(`floor${i}`), 336, 304, FLOOR), raw('plain')))), 336, 304, [-60, 0, 420, 380], 40, 72);
-await film('film-lid', await several(28, (i) => graded(raw(`lid${i}`), LAMPLIGHT)), 540, 640, [-18.75, -62.5, 337.5, 400], 78);
+// (and smaller ones for phones, which have far less memory: `-small`)
+const silkFrames = await several(58, (i) => silk(`silk${i}`));
+const silkShades = await several(58, async (i) => over(await shadow(raw('plain'), raw(`shade${i}`), 336, 304, { blur: 1.8, from: 9 }), outside(await shadow(raw('floor0'), raw(`floor${i}`), 336, 304, FLOOR), raw('plain'))));
+const lidFrames = await several(28, (i) => graded(raw(`lid${i}`), LAMPLIGHT));
+await film('film-silk', silkFrames, 672, 608, [-60, 0, 420, 380], 68, 70);
+await film('film-silk-small', silkFrames, 672, 608, [-60, 0, 420, 380], 70, 72, 0.62);
+await film('film-silk-shade', silkShades, 336, 304, [-60, 0, 420, 380], 40, 72);
+await film('film-silk-shade-small', silkShades, 336, 304, [-60, 0, 420, 380], 40, 72, 0.7);
+await film('film-lid', lidFrames, 540, 640, [-18.75, -62.5, 337.5, 400], 78);
+await film('film-lid-small', lidFrames, 540, 640, [-18.75, -62.5, 337.5, 400], 80, 92, 0.62);
 await film('film-lid-shade', await several(28, (i) => shadow(raw('open'), raw(`lidshade${i}`), 240, 264, { blur: 1.8 })), 240, 264, [0, 0, 300, 330], 40, 80);
 const FILMS = path.join(process.env.PROJECT ?? process.cwd(), 'src/engine/blocks/giftbox/films.js');
 fs.writeFileSync(

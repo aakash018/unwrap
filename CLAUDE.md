@@ -52,7 +52,10 @@ Read `README.md` for setup and the folder map.
   (`tools/presents/ribbon.h`) and, with the lid swinging open, rendered frame by
   frame; `opening.js` plays the films on two canvases (`film.js`, `films.js` is
   made by sheets.mjs), `burst.js` throws the petals. The films (~800 KB) are
-  fetched as the box comes near the screen. Anything else meant to look like a
+  fetched as the box comes near the screen. Phones (touch screens) get the
+  `-small` films and less sharp canvases: the full set crashed phone browsers
+  (founder, 26 Nov 2026). Keep canvases few and reused there: never make one a
+  frame, and set a finished one's size to 0 so its memory comes back at once. Anything else meant to look like a
   real thing should be made this way, never as flat SVG.
 - **Reading:** letters and hidden messages open in `blocks/shared/Reader.jsx`
   (a portal on the body). Receivers don't see a voice note with no recording.

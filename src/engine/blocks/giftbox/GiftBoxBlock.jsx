@@ -23,6 +23,8 @@ const STEPS = ['tap the ribbon', 'once more · खोल त!'];
 const PRESENT_AT = 430; // ms into the opening: the present starts up
 const LAYER = 'pointer-events-none absolute inset-0 size-full max-w-none';
 const FILM = { left: AREA.x, top: AREA.y, width: AREA.w, height: AREA.h };
+// how sharp the canvases are: less on phones, which have little memory
+const sharpness = () => (window.matchMedia?.('(pointer: coarse)').matches ? 1.5 : 2);
 const FALLEN = { left: -60, top: 700 / 3, width: 420, height: 470 / 3 }; // where the fallen ribbon's picture goes
 
 const Layer = ({ name, className = '' }) => <img src={pictureOf(name)} alt="" draggable={false} className={`${LAYER} ${className}`} />;
@@ -58,8 +60,9 @@ export default function GiftBoxBlock({ props }) {
   }, [props.ribbon]);
 
   useEffect(() => {
+    for (const canvas of [front.current, rear.current]) [canvas.width, canvas.height] = [AREA.w * sharpness(), AREA.h * sharpness()];
     opening.current = createOpening({ front: front.current, rear: rear.current, color: () => ribbon.current });
-    return () => opening.current.stop();
+    return () => opening.current.free();
   }, []);
 
   // fetch the films once the box is nearly on screen
@@ -130,7 +133,7 @@ export default function GiftBoxBlock({ props }) {
         <div className="absolute -bottom-[21px] left-0 h-[330px] w-[300px]">
           <img src={pictureOf('floor')} alt="" draggable={false} className="pointer-events-none absolute max-w-none" style={{ left: -60, top: 0, width: 420, height: 380 }} />
           <Layer name="box-back" />
-          <canvas ref={rear} width={AREA.w * 2} height={AREA.h * 2} className="pointer-events-none absolute max-w-none" style={FILM} />
+          <canvas ref={rear} className="pointer-events-none absolute max-w-none" style={FILM} />
           <span ref={mouth} className="pointer-events-none absolute top-[130px] left-[40px] h-[30px] w-[220px]" />
         </div>
 
@@ -180,7 +183,7 @@ export default function GiftBoxBlock({ props }) {
             {tied && <Layer name="tied-shade" />}
             {tied && <Silk name="silk-tied" color={props.ribbon} />}
             {fallen && <Silk name="silk-fallen" color={props.ribbon} style={FALLEN} />}
-            <canvas ref={front} width={AREA.w * 2} height={AREA.h * 2} className="pointer-events-none absolute max-w-none" style={FILM} />
+            <canvas ref={front} className="pointer-events-none absolute max-w-none" style={FILM} />
           </span>
         </button>
       </div>
