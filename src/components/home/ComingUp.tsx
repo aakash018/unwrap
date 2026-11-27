@@ -1,6 +1,7 @@
-// The special days you've asked to remember, the next first: whose, which day,
-// how soon. "Add a special day" opens a small box (a name, what kind, the
-// date). Each can be forgotten again. (lib/special-days.ts)
+// The special days you've asked to remember, the next first, in a card in
+// Home's side column: a small calendar date, whose, which day, how soon.
+// "Add" opens a small box (a name, what kind, the date). Each can be
+// forgotten again (its × shows on hover). (lib/special-days.ts)
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -10,10 +11,11 @@ import { longDate } from "@/lib/dates";
 import type { SpecialDay } from "@/lib/special-days";
 import Dialog from "./Dialog";
 import Icon from "./Icon";
-import { INPUT, PRIMARY } from "./styles";
+import { CARD, INPUT, PRIMARY, SECONDARY } from "./styles";
 
 const KIND_NAMES = { birthday: "Birthday", anniversary: "Anniversary", day: "Special day" };
 
+const MONTH = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" });
 const soon = (days: number) => (days === 0 ? "today" : days === 1 ? "tomorrow" : `in ${days} days`);
 
 export default function ComingUp({ days }: { days: SpecialDay[] }) {
@@ -49,34 +51,42 @@ export default function ComingUp({ days }: { days: SpecialDay[] }) {
   };
 
   return (
-    <section aria-label="Coming up">
-      <div className="flex items-baseline justify-between gap-4">
-        <h2 className="text-lg font-semibold tracking-tight">Coming up</h2>
-        <button type="button" onClick={() => box.current?.showModal()} className="cursor-pointer text-sm text-soft hover:text-ink">
-          + Add a special day
+    <section aria-label="Coming up" className={`${CARD} px-5 pt-5 pb-3`}>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-base font-semibold tracking-[-0.01em]">Coming up</h2>
+        <button type="button" onClick={() => box.current?.showModal()} className={`${SECONDARY} h-8 gap-1.5 px-2.5 text-[13px]`}>
+          <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden>
+            <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+          Add
         </button>
       </div>
 
       {days.length ? (
-        <ul className="mt-2">
+        <ul className="-mx-2 mt-3">
           {days.slice(0, 5).map((day) => (
-            <li key={day.id} className="group flex items-center justify-between gap-3 border-b border-line py-3 last:border-0">
-              <span className="min-w-0">
-                <span className="font-medium">{day.person}</span>
-                <span className="text-soft"> · {day.kind === "day" ? day.label || "Special day" : KIND_NAMES[day.kind]}</span>
+            <li key={day.id} className="group flex items-center gap-3 rounded-[10px] p-2 hover:bg-hover">
+              <span aria-hidden className="flex h-[46px] w-11 shrink-0 flex-col items-center justify-center rounded-[10px] border border-line/80 bg-white">
+                <span className="text-[11px] leading-none font-semibold text-[#a12a3b]">{MONTH.format(Date.parse(`${day.next}T00:00:00Z`))}</span>
+                <span className="mt-[3px] text-[17px] leading-none font-semibold">{Number(day.next.slice(8))}</span>
               </span>
-              <span className="flex shrink-0 items-center gap-2 text-sm text-soft">
-                {longDate(day.next).replace(/ \d{4}$/, "")}
-                <span className={day.inDays <= 14 ? "text-ink" : ""}>· {soon(day.inDays)}</span>
-                <button type="button" onClick={() => forget(day)} aria-label={`Forget ${day.person}'s day`} className="grid size-7 cursor-pointer place-items-center rounded-md opacity-0 group-hover:opacity-100 hover:bg-ink/5 focus-visible:opacity-100">
-                  <Icon name="close" size={14} />
-                </button>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">{day.person}</span>
+                <span className="block truncate text-[13px] text-soft">
+                  {day.kind === "day" ? day.label || "Special day" : KIND_NAMES[day.kind]}
+                  {day.turns ? (day.kind === "birthday" ? ` · turns ${day.turns}` : day.kind === "anniversary" ? ` · ${day.turns} ${day.turns === 1 ? "year" : "years"}` : "") : ""}
+                  <span className="sr-only">, {longDate(day.next)}</span>
+                </span>
               </span>
+              <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium whitespace-nowrap group-hover:hidden group-focus-within:hidden ${day.inDays <= 14 ? "bg-[#f8eaec] text-[#7a2232]" : "bg-canvas text-soft"}`}>{soon(day.inDays)}</span>
+              <button type="button" onClick={() => forget(day)} aria-label={`Forget ${day.person}'s day`} className="hidden size-7 shrink-0 cursor-pointer place-items-center rounded-md text-soft group-hover:grid group-focus-within:grid hover:bg-ink/5 hover:text-ink">
+                <Icon name="close" size={14} />
+              </button>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-2 text-soft">Birthdays and anniversaries you add show up here, so you never miss one.</p>
+        <p className="mt-2 pb-2 text-sm leading-relaxed text-soft">Add birthdays and anniversaries, and they&apos;ll show up here before they come round.</p>
       )}
 
       <Dialog ref={box} title="Add a special day">

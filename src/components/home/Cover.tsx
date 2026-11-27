@@ -18,10 +18,13 @@ type Props = { of: TemplateId | ThemeId | ReadyMadeId; sizes: string; background
 export default function Cover({ of, sizes, background, label }: Props) {
   const picture = COVERS[of];
   return (
-    <span className="relative block aspect-5/7 w-full overflow-hidden rounded-md bg-[#fbf7f0] ring-1 ring-ink/8 ring-inset" style={!picture && background ? { background } : undefined}>
+    <span
+      className="@container relative block aspect-5/7 w-full overflow-hidden rounded-md bg-[#fbf7f0] ring-1 ring-ink/8 ring-inset"
+      style={!picture && background ? { background: `linear-gradient(150deg, rgba(255,255,255,0.45), rgba(255,255,255,0) 55%), ${background}` } : undefined}
+    >
       {picture && <Image src={picture} alt="" fill sizes={sizes} placeholder="blur" className="object-cover" />}
       {!picture && label && (
-        <span className={`absolute inset-0 grid place-items-center p-3 text-center text-[13px] leading-snug ${isDark(background) ? "text-white/75" : "text-ink/55"}`}>
+        <span className={`absolute inset-0 grid place-items-center p-[12%] text-center leading-tight font-medium tracking-tight ${isDark(background) ? "text-white/85" : "text-ink/70"}`} style={{ fontSize: "clamp(11px, 9cqw, 22px)" }}>
           <span className="line-clamp-4">{label}</span>
         </span>
       )}

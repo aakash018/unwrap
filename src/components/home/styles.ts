@@ -7,3 +7,6 @@ export const PRIMARY = `${BASE} bg-ink text-white hover:bg-ink/85`;
 export const SECONDARY = `${BASE} border border-line bg-white hover:bg-hover`;
 export const ROUND = `grid size-10 shrink-0 cursor-pointer place-items-center rounded-lg text-soft transition-colors hover:bg-ink/5 hover:text-ink ${FOCUS}`;
 export const INPUT = `h-11 w-full rounded-lg border border-line bg-white px-3 text-[15px] placeholder:text-soft/70 ${FOCUS}`;
+
+// a white card on Home's grey
+export const CARD = "rounded-2xl border border-line/80 bg-white";

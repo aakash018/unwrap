@@ -249,22 +249,35 @@ Read `README.md` for setup and the folder map.
   scroll (`ThemeLayer.jsx`): whole-page
   drawing every frame isn't possible there. Swiping scrolls; tapping bursts.
 - **Home (`/home`)** (rebuilt 27 Nov 2026; the founder: used once in a while,
-  a gift for an occasion, a wedding once in a lifetime, so no grid of
-  numbers). Its top feels like what's happening (`components/home/Mood.tsx`,
-  chosen in the page): a live wedding (lively: Live dot, countdown, opens),
-  else a gift opened this week (sweet: "Soni opened your gift"), else one
-  sent this week and not opened, else a special day within 30 days ("Soni's
-  birthday is in 9 days" → the right ready-made, name filled in), else a
-  gentle "Who deserves a little surprise this week?". Then two short banners
-  (New gift, New wedding invitation), then Yours as covers with one status
-  line each and a ··· menu (`YoursCard.tsx`: Edit, Preview, Publish, Share
-  link, Delete; Plain gifts get a cover in their own colour), then Coming up
-  (`ComingUp.tsx`: special days, add / forget). After publishing a gift,
+  a gift for an occasion, a wedding once in a lifetime, so no wall of
+  numbers; then "childish, like a school project": redesigned on a Claude
+  Design canvas, "Unwrap dashboard", https://claude.ai/artifact/5CPRBsnSjC7g65W6ZtVgP1).
+  White cards on a soft grey (`bg-canvas`, `CARD` in `home/styles.ts`),
+  max 1200 px: a greeting (date, नमस्ते, name) with Wedding invitation and
+  New gift; on the left a card about what's happening (`Mood.tsx`, chosen in
+  the page) and Yours (`Yours.tsx`); on the right Coming up and Start
+  something new (under them on a phone). The first card: the cover, a status
+  line with a dot, the title, a sentence, a row of 2–3 numbers, then Copy
+  link · Edit · Preview. Which one: a live wedding (pulsing Live; opens,
+  today, days to go), else a gift opened this week (sweet: "Soni opened your
+  gift"), else one sent this week and not opened (amber "Sent · not opened
+  yet"), else a special day within 30 days ("Soni's birthday is in 9 days" →
+  the right ready-made, name filled in), else "Who deserves a little
+  surprise?" with three ready-made covers. Yours: covers with one status
+  line each, All · Gifts · Invitations tabs when there are both, and a ···
+  menu (`YoursCard.tsx`: Edit, Preview, Publish, Share link, Delete; Plain
+  gifts get a cover in their own colour with their title). Coming up
+  (`ComingUp.tsx`): a small calendar date per special day, how soon (a rose
+  chip within 14 days), Add, × on hover to forget. After publishing a gift,
   Publish offers to remember the person's birthday or anniversary
   (`RememberDay.tsx`). Special days are `special_days` in the database
   (`lib/special-days.ts`; international dates for now, `calendar` ready for
   BS). Opens are recorded by the opened page itself (`noteOpen`, once a
-  visit; not the sender's own, not link-preview bots). Not yet: RSVP numbers
+  visit; not the sender's own, not link-preview bots). The New gift and New
+  invitation boxes (`Dialog.tsx`: a title with a line under it, and
+  `DialogFooter`, a grey strip with Cancel and the main button that stays put
+  while a tall box scrolls) pick from cards with a tick on the chosen one.
+  Not yet: RSVP numbers
   on the wedding card, email reminders, BS dates, Nepali festival dates.
 - **Links:** `/g/…` (gifts) and `/i/…` (invitations) open the built-in demos
   (`lib/demos.ts`) or else the published page (`open_page`), with a link
@@ -272,7 +285,8 @@ Read `README.md` for setup and the folder map.
 - **Look** (founder, 25 Nov 2026: the first dashboard was "very very bad", the
   second "childish and trash", to come back to later): white page, plain
   lists, Hanken Grotesk only, ink with one accent (`wine`) and `leaf` for
-  live. No beige, cards, badges, boxes in boxes or sidebar.
+  live. No beige, badges or boxes in boxes. (Home since 27 Nov 2026: plain
+  white cards on light grey, see Home above.)
 - **Database** (`supabase/migrations/20261126120000_first_tables.sql`, 26 Nov
   2026; applied to Supabase the same day; `projects` and publishing are used by
   the app, the rest (guests, RSVP, blessings, opens, media) not yet. Later

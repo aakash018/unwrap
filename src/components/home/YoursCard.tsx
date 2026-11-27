@@ -15,7 +15,7 @@ import Icon from "./Icon";
 import Menu, { MENU_ITEM } from "./Menu";
 import Publish from "./Publish";
 
-export type Opens = { opens: number; openedToday: number; lastOpened?: string };
+export type Opens = { opens: number; openedToday: number; lastOpened?: string; publishedAt?: string };
 
 // "2 Nov", "today", "yesterday"
 const shortDay = (iso: string) => {
@@ -25,12 +25,12 @@ const shortDay = (iso: string) => {
 };
 
 function statusOf(one: (Gift | Invitation) & Opens): { words: string; live: boolean } {
-  if (one.status === "draft") return { words: one.edited === today() ? "Draft · edited today" : "Draft", live: false };
+  if (one.status === "draft") return { words: one.edited === today() ? "Edited today" : "Draft", live: false };
   if (one.kind === "invitation") {
     if (one.status === "past") return { words: "Ended", live: false };
     return { words: one.eventDay ? `Live · ${longDate(one.eventDay).replace(/ \d{4}$/, "")}` : "Live", live: true };
   }
-  return one.lastOpened ? { words: `Opened · ${shortDay(one.lastOpened)}`, live: true } : { words: "Sent · not opened yet", live: false };
+  return one.lastOpened ? { words: `Opened · ${shortDay(one.lastOpened)}`, live: true } : { words: "Not opened yet", live: false };
 }
 
 export default function YoursCard({ one }: { one: (Gift | Invitation) & Opens }) {
@@ -50,13 +50,13 @@ export default function YoursCard({ one }: { one: (Gift | Invitation) & Opens })
 
   return (
     <li className="group relative">
-      <Link href={past ? previewUrl(kind, id) : editUrl(kind, id)} prefetch={false} className="block rounded-md transition-transform group-hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine">
-        <Cover of={kind === "gift" ? one.theme : one.template} sizes="12rem" background={one.kind === "gift" ? one.background : undefined} label={title} />
+      <Link href={past ? previewUrl(kind, id) : editUrl(kind, id)} prefetch={false} className="block overflow-hidden rounded-lg shadow-[0_1px_2px_rgba(23,24,26,0.06)] transition duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_14px_28px_-12px_rgba(23,24,26,0.3)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine">
+        <Cover of={kind === "gift" ? one.theme : one.template} sizes="10rem" background={one.kind === "gift" ? one.background : undefined} label={title} />
       </Link>
       <div className="mt-2.5 flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-[15px] font-medium">{title}</p>
-          <p className={`text-sm ${status.live ? "text-leaf" : "text-soft"}`}>{status.words}</p>
+          <p className="truncate text-sm font-medium">{title}</p>
+          <p className={`truncate text-[13px] ${status.live ? "text-leaf" : "text-soft"}`}>{status.words}</p>
         </div>
         <Menu label={`More for ${title}`} button={<Icon name="more" />} buttonClass="-mr-2 grid size-8 shrink-0 cursor-pointer place-items-center rounded-lg text-soft hover:bg-ink/5 hover:text-ink">
           {!past && (

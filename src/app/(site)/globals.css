@@ -12,6 +12,7 @@
   --color-soft: #66686c; /* quieter words */
   --color-line: #e7e7e8;
   --color-hover: #f6f6f6;
+  --color-canvas: #f7f7f6; /* behind Home's cards */
   --color-wine: #6a1a2b; /* only for what's in focus, and for mistakes */
   --color-leaf: #2f6b4f; /* live */
 }
