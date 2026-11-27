@@ -9,7 +9,8 @@ export type ReadyMadeId = "love-sky" | "birthday-garden" | "anniversary-lake";
 export type Chapter = { id: string; type: string; props: Record<string, unknown> };
 // (size and align: for words, in that layout)
 export type Frame = { x: number; y: number; w: number; rotation: number; size?: number; align?: string };
-export type Element = Chapter & { frame: Frame; frames?: { tablet?: Frame; desktop?: Frame } };
+// (first: its places in the wide layouts when the gift was started, for "Arrange again")
+export type Element = Chapter & { frame: Frame; frames?: { tablet?: Frame; desktop?: Frame }; first?: { tablet?: Frame; desktop?: Frame } };
 
 export type SavedInvitation = { format: number; kind: "invitation"; template: TemplateId; chapters: Chapter[] };
 // opening: who it's for and the words above their name, on its loader (page/Loader.jsx)

@@ -29,6 +29,7 @@ export function readyMade(id, names) {
       ...createBlock(type, undefined, props),
       frame: place(mobile),
       frames: { tablet: place(tablet), desktop: place(desktop) },
+      first: { tablet: place(tablet), desktop: place(desktop) }, // (what "Arrange again" goes back to)
     })),
   };
 }

@@ -71,7 +71,9 @@ function useSettled(width) {
 // `screenHeight` = how tall one screen is (page px). In the editor that's the
 // design screen (800); in the preview it's the viewer's real window, so
 // decorations meant for the first screen land on it.
-export default function ThemeLayer({ themeId, width, height, zoom = 1, screenHeight = PAGE_HEIGHT, name = '' }) {
+// `still`: the editor's Move tool is on, so its balloons and lanterns aren't
+// grabbed or burst (clicks fall through to the page, which deselects).
+export default function ThemeLayer({ themeId, width, height, zoom = 1, screenHeight = PAGE_HEIGHT, name = '', still = false }) {
   const theme = THEMES[themeId];
   const animated = Boolean(theme?.createScene);
   const layerCount = theme?.layers?.length ?? 0;
@@ -363,7 +365,7 @@ export default function ThemeLayer({ themeId, width, height, zoom = 1, screenHei
       <canvas key={`${themeId}-backdrop`} ref={backdropRef} className="pointer-events-none absolute inset-0 size-full" />
       <canvas
         ref={canvasRef}
-        className="absolute inset-x-0 top-0 block h-0 w-full touch-pan-y will-change-transform"
+        className={`absolute inset-x-0 top-0 block h-0 w-full touch-pan-y will-change-transform ${still ? 'pointer-events-none' : ''}`}
         onPointerDown={onPointerDown}
         onClick={onClick}
         onPointerMove={onPointerMove}

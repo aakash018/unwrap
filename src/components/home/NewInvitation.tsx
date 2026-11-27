@@ -3,7 +3,7 @@
 
 import { useRouter } from "next/navigation";
 import { startProgress } from "@/components/PageProgress";
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { TemplateId } from "@/engine/page/types";
 import { startProject } from "@/app/projects/actions";
 import { editUrl, TEMPLATES } from "@/lib/projects";
@@ -11,7 +11,8 @@ import Cover from "./Cover";
 import Dialog from "./Dialog";
 import { INPUT, PRIMARY } from "./styles";
 
-export default function NewInvitation() {
+// (its button can be anything: `children`, `className`)
+export default function NewInvitation({ children, className }: { children?: ReactNode; className?: string }) {
   const box = useRef<HTMLDialogElement>(null);
   const router = useRouter();
   const [state, setState] = useState<"" | "starting" | "failed">("");
@@ -35,8 +36,8 @@ export default function NewInvitation() {
 
   return (
     <>
-      <button type="button" onClick={() => box.current?.showModal()} className={PRIMARY}>
-        New invitation
+      <button type="button" onClick={() => box.current?.showModal()} className={className ?? PRIMARY}>
+        {children ?? "New invitation"}
       </button>
       <Dialog ref={box} title="New invitation">
         <form onSubmit={start} className="p-6">

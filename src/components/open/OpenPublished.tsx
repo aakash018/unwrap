@@ -6,17 +6,26 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import { noteOpen } from "@/app/projects/actions";
 import Loader from "@/engine/page/Loader";
 import type { Saved } from "@/engine/page/types";
 import Opening from "./Opening";
+
+const noted = new Set<string>(); // (once a page load, even where React runs effects twice)
 
 const Viewer = dynamic(() => import("@/engine/page/Viewer"), { ssr: false });
 
 // behind an invitation's first words, by template
 const COLORS = { "garden-wedding": "#565a80", "hindu-wedding": "#101540" };
 
-export default function OpenPublished({ saved, lines }: { saved: Saved; lines: string[] }) {
+export default function OpenPublished({ saved, lines, slug }: { saved: Saved; lines: string[]; slug: string }) {
   const isGift = saved.kind === "gift";
+  // it's been opened (once a visit; the sender's Home shows it)
+  useEffect(() => {
+    if (noted.has(slug)) return;
+    noted.add(slug);
+    noteOpen(slug);
+  }, [slug]);
   const [ready, setReady] = useState(false);
   useEffect(() => {
     // a gift: its code starts downloading now (its loader builds it once the bow is drawn)

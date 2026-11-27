@@ -10,6 +10,7 @@
 //   deleteProject(id)
 //   publishProject(id, code)  what people see becomes the draft → its link's slug
 //   openPublished(slug)       a published page, for anyone with the link
+//   noteOpened(slug)          someone opened it (not its own sender)
 
 import { infoOf } from "@/engine/page/info";
 import { upgrade } from "@/engine/page/format";
@@ -27,14 +28,18 @@ export type Listed = {
   title: string;
   toName?: string;
   design: string; // its theme or template
+  background?: string; // a gift's page colour (for a Plain one's cover)
   edited: string; // when, as an ISO time
   slug?: string; // once published
   publishedAt?: string;
   changed: boolean; // edited since it was published
   eventDay?: string; // an invitation's day, YYYY-MM-DD
+  opens: number; // times its link was opened (by others)
+  openedToday: number;
+  lastOpened?: string; // ISO time
 };
 
-export type Loaded = { kind: Kind; saved: Saved; toName?: string; edited: number };
+export type Loaded = { kind: Kind; saved: Saved; toName?: string; edited: number; slug?: string; changed: boolean };
 
 export class ProjectError extends Error {}
 
@@ -57,30 +62,56 @@ export async function listProjects(): Promise<Listed[]> {
   const supabase = await createSupabase();
   const { data, error } = await supabase
     .from("projects")
-    .select("id, kind, title, to_name, updated_at, published_at, slug, event_date, theme:draft->>theme, template:draft->>template")
+    .select("id, kind, title, to_name, updated_at, published_at, slug, event_date, theme:draft->>theme, template:draft->>template, background:draft->>background")
     .order("updated_at", { ascending: false });
   if (error) throw error;
+  const opens = await opensOf(supabase, data.filter((row) => row.published_at).map((row) => row.id));
   return data.map((row) => ({
     id: row.id,
     kind: row.kind,
     title: row.title,
     toName: row.to_name ?? undefined,
     design: (row.kind === "gift" ? row.theme : row.template) ?? "plain",
+    background: row.background ?? undefined,
     edited: row.updated_at,
     slug: row.slug ?? undefined,
     publishedAt: row.published_at ?? undefined,
     changed: Boolean(row.published_at && row.updated_at > row.published_at),
     eventDay: row.event_date ?? undefined,
+    ...(opens.get(row.id) ?? { opens: 0, openedToday: 0 }),
   }));
+}
+
+// How often each published project was opened, today, and last.
+async function opensOf(supabase: Awaited<ReturnType<typeof createSupabase>>, ids: string[]) {
+  const counts = new Map<string, { opens: number; openedToday: number; lastOpened?: string }>();
+  if (!ids.length) return counts;
+  const { data, error } = await supabase.from("opens").select("project_id, opened_at").in("project_id", ids).order("opened_at", { ascending: false }).limit(5000);
+  if (error) throw error;
+  const today = Date.now() - 24 * 60 * 60 * 1000;
+  for (const { project_id, opened_at } of data) {
+    const one = counts.get(project_id) ?? { opens: 0, openedToday: 0, lastOpened: opened_at };
+    one.opens += 1;
+    if (Date.parse(opened_at) > today) one.openedToday += 1;
+    counts.set(project_id, one);
+  }
+  return counts;
 }
 
 // null when there's no such project of yours.
 export async function loadProject(id: string): Promise<Loaded | null> {
   const supabase = await createSupabase();
-  const { data, error } = await supabase.from("projects").select("kind, draft, to_name, updated_at").eq("id", id).maybeSingle();
+  const { data, error } = await supabase.from("projects").select("kind, draft, to_name, updated_at, slug, published_at").eq("id", id).maybeSingle();
   if (error) throw error;
   if (!data) return null;
-  return { kind: data.kind, saved: upgrade(data.draft), toName: data.to_name ?? undefined, edited: Date.parse(data.updated_at) };
+  return {
+    kind: data.kind,
+    saved: upgrade(data.draft),
+    toName: data.to_name ?? undefined,
+    edited: Date.parse(data.updated_at),
+    slug: data.slug ?? undefined,
+    changed: Boolean(data.published_at && data.updated_at > data.published_at),
+  };
 }
 
 export async function createProject(saved: Saved): Promise<string> {
@@ -136,4 +167,16 @@ export async function openPublished(slug: string): Promise<Published | null> {
   if (error) throw error;
   if (!data) return null;
   return { kind: data.kind, saved: upgrade(data.page) };
+}
+
+// Someone opened a published page: kept for its sender's Home ("Soni opened
+// your gift"). Not when it's the sender's own (they can read their projects;
+// nobody else can).
+export async function noteOpened(slug: string): Promise<void> {
+  if (!/^[a-z0-9]{4,32}$/.test(slug)) return;
+  const supabase = await createSupabase();
+  const { data: mine } = await supabase.from("projects").select("id").eq("slug", slug).maybeSingle();
+  if (mine) return;
+  const { error } = await supabase.rpc("note_open", { slug });
+  if (error) throw error;
 }

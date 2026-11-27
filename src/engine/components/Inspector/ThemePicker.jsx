@@ -1,9 +1,8 @@
-// Theme picker: a small live preview of each background.
-// "Plain" lets you choose a single colour instead.
+// The left rail's Theme tab (Toolbar.jsx): a small live preview of each
+// background to choose from. (A theme's ready-made gifts are under it in the
+// right panel: ReadyMades.jsx; "Plain"'s colour too: Inspector.jsx.)
 import { THEMES, THEME_ORDER } from '../../themes';
 import ThemeThumbnail from '../../themes/ThemeThumbnail';
-import Field from '../shared/Field';
-import ColorInput from '../shared/ColorInput';
 
 export default function ThemePicker({ page, dispatch }) {
   return (
@@ -30,11 +29,6 @@ export default function ThemePicker({ page, dispatch }) {
         })}
       </div>
 
-      {page.theme === 'plain' && (
-        <Field label="Colour">
-          <ColorInput value={page.background} onChange={(color) => dispatch({ type: 'SET_BACKGROUND', color })} />
-        </Field>
-      )}
     </div>
   );
 }

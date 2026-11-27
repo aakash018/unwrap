@@ -14,6 +14,7 @@
 //       frame: { x: 40, y: 60, w: 340, rotation: 0 },   // where it sits (page px, degrees)…
 //       frames: { tablet: {…}, desktop: {…} },          // …and in the wider layouts, if
 //                                                       // it has its own place there
+//       first: { tablet: {…}, desktop: {…} },           // where it started there (ready-made gifts)
 //       props: { text: 'Hi!', align: 'center', ... },  // what it says / shows
 //     },
 //   ],
@@ -25,11 +26,18 @@
 //   { type: 'ADD_BLOCK',      blockType: 'heading', at: { x, y }, layout } // `at` = where to centre it
 //   { type: 'UPDATE_BLOCK',   id, props: { text: 'new' } }          // merges into props
 //   { type: 'UPDATE_FRAME',   id, frame: { x: 10 }, layout }        // merges into its place in that layout
-//   { type: 'ARRANGE',        layout }                              // forget that layout's places: work them out
+//   { type: 'ARRANGE',        layout }                              // that layout as it started: each element where it
+//                                                                  // was first (`first`), the rest worked out
 //   { type: 'REMOVE_BLOCK',   id }
 //   { type: 'MOVE_LAYER',     id, direction: 'forward' | 'backward' }
+//   { type: 'PLACE_LAYER',    id, index }                           // anywhere in the order (0 = at the back):
+//                                                                  // dragged in the Layers list
 //   { type: 'SELECT_BLOCK',   id }                                  // id = null to deselect
 //   { type: 'SET_OPENING',    opening: { name?, words? } }          // merges into what the loader says
+//   { type: 'CLEAR_ALL' }                                           // a gift: every element gone (the theme
+//                                                                  // and who it's for stay)
+//   { type: 'START_FROM',     saved }                               // the whole page becomes this one (a
+//                                                                  // ready-made gift, chosen in the Theme tab)
 //   { type: 'SET_THEME',      theme: 'marigold' }
 //   { type: 'SET_BACKGROUND', color: '#ffeedd' }                    // for the plain theme
 //   { type: 'MOVE_SECTION',   id, direction: 'up' | 'down' }        // reorder full-width sections
@@ -120,6 +128,8 @@ export function pageReducer(page, action) {
         blocks: page.blocks.map(({ frames, ...block }) => {
           const rest = { ...frames };
           delete rest[action.layout];
+          const first = block.first?.[action.layout];
+          if (first) rest[action.layout] = first;
           return Object.keys(rest).length ? { ...block, frames: rest } : block;
         }),
       };
@@ -140,6 +150,18 @@ export function pageReducer(page, action) {
 
       const blocks = [...page.blocks];
       [blocks[from], blocks[to]] = [blocks[to], blocks[from]];
+      return { ...page, blocks };
+    }
+
+    case 'PLACE_LAYER': {
+      const from = page.blocks.findIndex((b) => b.id === action.id);
+      if (from === -1 || isSection(page.blocks[from])) return page;
+      const blocks = [...page.blocks];
+      const [block] = blocks.splice(from, 1);
+      // (never behind the sections: they stay at the back)
+      const to = Math.max(blocks.filter(isSection).length, Math.min(blocks.length, action.index));
+      if (to === from) return page;
+      blocks.splice(to, 0, block);
       return { ...page, blocks };
     }
 
@@ -167,6 +189,12 @@ export function pageReducer(page, action) {
 
     case 'SELECT_BLOCK':
       return { ...page, selectedId: action.id };
+
+    case 'CLEAR_ALL':
+      return page.kind === 'gift' ? { ...page, blocks: [], selectedId: null } : page;
+
+    case 'START_FROM':
+      return openPage(action.saved);
 
     case 'SET_THEME': {
       // Text still in the old theme's colour switches to the new theme's

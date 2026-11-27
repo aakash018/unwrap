@@ -3,7 +3,8 @@
 //   • not published yet: an activation code, then Publish (it takes one code)
 //   • published, then changed: Publish the changes (no code needed again)
 //   • published: its link, to copy and send
-// After publishing it shows the link.
+// After publishing it shows the link. Used on Home (Row.tsx) and in the
+// editor (Edit.tsx), which saves the latest changes first: `beforePublish`.
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -11,6 +12,7 @@ import { useState, type FormEvent, type RefObject } from "react";
 import { publish } from "@/app/projects/actions";
 import { shareUrl, type Kind } from "@/lib/projects";
 import Dialog from "./Dialog";
+import RememberDay from "./RememberDay";
 import { INPUT, PRIMARY, SECONDARY } from "./styles";
 
 type Props = {
@@ -20,9 +22,12 @@ type Props = {
   title: string;
   slug?: string; // once published
   changed: boolean; // edited since
+  person?: string; // who a gift is for: just published, it offers to remember their day
+  beforePublish?: () => Promise<boolean>; // false: it couldn't be done (said already)
+  onPublished?: (slug: string) => void;
 };
 
-export default function Publish({ ref, kind, id, title, slug, changed }: Props) {
+export default function Publish({ ref, kind, id, title, slug, changed, person, beforePublish, onPublished }: Props) {
   const router = useRouter();
   const [state, setState] = useState<"" | "publishing" | "copied">("");
   const [problem, setProblem] = useState("");
@@ -40,6 +45,11 @@ export default function Publish({ ref, kind, id, title, slug, changed }: Props) 
     setProblem("");
     const code = String(new FormData(event.currentTarget).get("code") ?? "");
     try {
+      if (beforePublish && !(await beforePublish())) {
+        setProblem("Your latest changes aren't saved yet. Check your connection and try again.");
+        setState("");
+        return;
+      }
       const done = await publish(id, kind, code);
       if (!done.ok) {
         setProblem(done.problem);
@@ -49,6 +59,7 @@ export default function Publish({ ref, kind, id, title, slug, changed }: Props) 
       setUrl(done.url);
       setJustPublished(true);
       setState("");
+      onPublished?.(done.url.split("/").pop() ?? "");
       router.refresh(); // Home shows it live
     } catch {
       setProblem("That didn't work. Check your connection and try again.");
@@ -80,6 +91,7 @@ export default function Publish({ ref, kind, id, title, slug, changed }: Props) 
                 Open it
               </a>
             </p>
+            {justPublished && kind === "gift" && person && <RememberDay person={person} />}
           </>
         ) : (
           <form onSubmit={send}>

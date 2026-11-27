@@ -1,10 +1,12 @@
 // "New gift": say who it's for, choose a ready-made gift or just a theme, and
-// start.
+// start. Its button can be anything (`children`, `className`), and it can
+// open with who it's for and what to start from already chosen (`preset`:
+// "Make her something" for a birthday on Home).
 "use client";
 
 import { useRouter } from "next/navigation";
 import { startProgress } from "@/components/PageProgress";
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { ReadyMadeId, ThemeId } from "@/engine/page/types";
 import { startProject } from "@/app/projects/actions";
 import { editUrl, READY_MADE, THEMES } from "@/lib/projects";
@@ -14,7 +16,9 @@ import { INPUT, PRIMARY } from "./styles";
 
 const CHOICE = "block rounded-md outline-offset-3 peer-checked:outline-2 peer-checked:outline-ink peer-focus-visible:outline-wine";
 
-export default function NewGift({ name }: { name: string }) {
+type Props = { name: string; children?: ReactNode; className?: string; preset?: { to?: string; start?: string } };
+
+export default function NewGift({ name, children, className, preset }: Props) {
   const box = useRef<HTMLDialogElement>(null);
   const router = useRouter();
   const [state, setState] = useState<"" | "starting" | "failed">("");
@@ -42,15 +46,15 @@ export default function NewGift({ name }: { name: string }) {
 
   return (
     <>
-      <button type="button" onClick={() => box.current?.showModal()} className={PRIMARY}>
-        New gift
+      <button type="button" onClick={() => box.current?.showModal()} className={className ?? PRIMARY}>
+        {children ?? "New gift"}
       </button>
       <Dialog ref={box} title="New gift">
         <form onSubmit={start} className="p-6">
           <div className="grid grid-cols-2 gap-3">
             <label>
               <span className="mb-2 block text-sm text-soft">Who is it for?</span>
-              <input name="to" maxLength={60} autoComplete="off" className={INPUT} />
+              <input name="to" maxLength={60} autoComplete="off" defaultValue={preset?.to} className={INPUT} />
             </label>
             <label>
               <span className="mb-2 block text-sm text-soft">From</span>
@@ -62,7 +66,7 @@ export default function NewGift({ name }: { name: string }) {
             <legend className="mb-3 text-sm text-soft">Ready-made, to change as you like</legend>
             {READY_MADE.map(({ id, name, note }, i) => (
               <label key={id} className="block cursor-pointer">
-                <input type="radio" name="start" value={`ready:${id}`} defaultChecked={i === 0} className="peer sr-only" />
+                <input type="radio" name="start" value={`ready:${id}`} defaultChecked={preset?.start ? preset.start === `ready:${id}` : i === 0} className="peer sr-only" />
                 <span className={`flex h-full items-center gap-4 ${CHOICE}`}>
                   <span className="w-24 shrink-0">
                     <Cover of={id} sizes="8rem" />
@@ -80,7 +84,7 @@ export default function NewGift({ name }: { name: string }) {
             <legend className="mb-3 text-sm text-soft">Or make it yourself, on a theme</legend>
             {THEMES.map(({ id, name }) => (
               <label key={id} className="cursor-pointer">
-                <input type="radio" name="start" value={`theme:${id}`} className="peer sr-only" />
+                <input type="radio" name="start" value={`theme:${id}`} defaultChecked={preset?.start === `theme:${id}`} className="peer sr-only" />
                 <span className={CHOICE}>
                   <Cover of={id} sizes="9rem" />
                 </span>

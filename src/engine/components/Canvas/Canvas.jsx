@@ -10,6 +10,10 @@
 //
 // Clicking empty canvas space deselects the current element.
 //
+// Tools (on the zoom bar): Move (V, the default) — the elements and the
+// theme's balloons and lanterns don't react to the pointer, so anything can be
+// picked up and dragged; Try it (I) — they work as on the gift.
+//
 // Mobile · Tablet · Desktop: the page fills the width of bigger screens — its
 // scenery (an invitation's chapters, a gift's theme) is as wide as the device,
 // and everything else stands in a column in the middle, exactly as the
@@ -28,10 +32,15 @@ import { useEditorKeys } from './useEditorKeys';
 import { deviceScreen } from '../../config';
 import ThemeLayer from '../../themes/ThemeLayer';
 import { THEMES } from '../../themes';
-import { LAYOUTS } from '../../page/layouts';
+import { LAYOUTS, movedSinceStart } from '../../page/layouts';
 import { StageContext, PageWidthContext } from '../../sections/StoryScene';
 
-export default function Canvas({ page, dispatch, apiRef, device, onDevice }) {
+// `actions`: saved · ▶ preview · Publish, floating at the top right when
+// there's no right panel to hold them (Editor.jsx)
+// What a tile dragged from the left panel carries: its element's type (Toolbar.jsx).
+export const DROP_TYPE = 'application/x-unwrap-element';
+
+export default function Canvas({ page, dispatch, apiRef, device, onDevice, actions }) {
   const screen = deviceScreen(device);
   const column = LAYOUTS[page.layout].width;
   const pageWidth = screen.width;
@@ -61,6 +70,26 @@ export default function Canvas({ page, dispatch, apiRef, device, onDevice }) {
   const pageHeight = usePageHeight(pageRef, page.blocks, zoom, { min: Math.max(screen.screenHeight, theme.minHeight ?? 0) });
   useEditorKeys(page, dispatch);
 
+  // a gift: everything off the page, after a clear warning (there's no undo)
+  const clearAll = () => {
+    const count = page.blocks.length;
+    const asked = `Clear everything on the page?\n\nAll ${count} ${count === 1 ? 'element' : 'elements'} will be removed: words, photos, surprises. The theme and who it's for stay.\n\nThis can't be undone.`;
+    if (window.confirm(asked)) dispatch({ type: 'CLEAR_ALL' });
+  };
+
+  // the tool, and its keys (not while typing, nor with ⌘/Ctrl)
+  const [tool, setTool] = useState('move');
+  useEffect(() => {
+    const onKey = (e) => {
+      const typing = e.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
+      if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'v' || e.key === 'V') setTool('move');
+      if (e.key === 'i' || e.key === 'I') setTool('interact');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   // Let the toolbar ask "where is the middle of what I'm looking at?",
   // so new elements appear in view (like Figma).
   useEffect(() => {
@@ -76,7 +105,24 @@ export default function Canvas({ page, dispatch, apiRef, device, onDevice }) {
   }, [apiRef, viewportRef, zoom, side, column]);
 
   return (
-    <main className="relative overflow-hidden bg-backdrop">
+    <main
+      className="relative overflow-hidden bg-backdrop"
+      // a tile from the left panel, dropped: that element, where it was let go
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes(DROP_TYPE)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+      }}
+      onDrop={(e) => {
+        const blockType = e.dataTransfer.getData(DROP_TYPE);
+        if (!blockType || !pageRef.current) return;
+        e.preventDefault();
+        const pg = pageRef.current.getBoundingClientRect();
+        const x = (e.clientX - pg.left) / zoom - side; // in the column's px
+        const y = (e.clientY - pg.top) / zoom + 100; // (ADD_BLOCK puts the top ~100 px above: this puts it at the pointer)
+        dispatch({ type: 'ADD_BLOCK', blockType, at: { x: Math.min(column, Math.max(0, x)), y: Math.max(0, y) } });
+      }}
+    >
       <div
         ref={viewportRef}
         data-scroller // story sections measure their scroll progress against this
@@ -85,11 +131,13 @@ export default function Canvas({ page, dispatch, apiRef, device, onDevice }) {
       >
         {/* min-w-max lets the area grow sideways when the page is zoomed wider than the screen */}
         <div className="flex min-h-full min-w-max items-start justify-center px-16 pt-16 pb-28">
-          {/* the page: sharp corners, hairline edge */}
+          {/* the page: sharp corners, hairline edge. ('isolate': what's raised
+              inside it, like an opening gift box, stays inside it, under the
+              zoom bar and device switch) */}
           <div
             ref={pageRef}
             data-page
-            className="relative shadow-[0_0_0_1px_rgba(30,27,24,0.08),0_2px_10px_rgba(30,27,24,0.06)]"
+            className="relative isolate shadow-[0_0_0_1px_rgba(30,27,24,0.08),0_2px_10px_rgba(30,27,24,0.06)]"
             style={{
               width: pageWidth,
               height: pageHeight,
@@ -98,7 +146,7 @@ export default function Canvas({ page, dispatch, apiRef, device, onDevice }) {
               zoom,
             }}
           >
-            <ThemeLayer themeId={page.theme} width={pageWidth} height={pageHeight} zoom={zoom} screenHeight={screen.screenHeight} name={page.opening?.name} />
+            <ThemeLayer themeId={page.theme} width={pageWidth} height={pageHeight} zoom={zoom} screenHeight={screen.screenHeight} name={page.opening?.name} still={tool === 'move'} />
 
             {page.blocks.length === 0 && (
               <div
@@ -132,6 +180,7 @@ export default function Canvas({ page, dispatch, apiRef, device, onDevice }) {
                     dispatch={dispatch}
                     pageWidth={pageWidth}
                     column={column}
+                    tool={tool}
                   />
                 ))}
               </PageWidthContext.Provider>
@@ -140,8 +189,9 @@ export default function Canvas({ page, dispatch, apiRef, device, onDevice }) {
         </div>
       </div>
 
-      <DeviceSwitch device={device} onChange={onDevice} onArrange={page.blocks.some(({ frames }) => frames?.[page.layout]) ? () => dispatch({ type: 'ARRANGE', layout: page.layout }) : null} />
-      <ZoomControls {...zoomApi} />
+      <DeviceSwitch device={device} onChange={onDevice} onArrange={movedSinceStart(page.blocks, page.layout) ? () => dispatch({ type: 'ARRANGE', layout: page.layout }) : null} />
+      <ZoomControls {...zoomApi} tool={tool} onTool={setTool} onClearAll={page.kind === 'gift' && page.blocks.length ? clearAll : null} />
+      {actions && <div className="absolute top-4 right-4 z-30 flex max-w-[calc(50%-150px)] items-center rounded-xl border border-line bg-white p-1 pl-3 shadow-lg">{actions}</div>}
     </main>
   );
 }

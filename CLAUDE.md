@@ -13,6 +13,12 @@ Read `README.md` for setup and the folder map.
   proxy.ts is only the quick check.
 - **Return addresses** always go through `safePath()`.
 - **Port 4321**, because 3000 and 3100 are used by other things on this Mac.
+- **Two stylesheets:** the site's (`app/(site)/globals.css`) and the engine's
+  (`engine/index.css`, editor and opened links), which only builds classes
+  for the files it lists with `@source`. A component shared with the editor
+  (the Publish box from components/home) must be listed there, with any
+  colours it uses. If a style change doesn't show in `npm run dev`, restart
+  it: its Tailwind step can get stuck on an old stylesheet (27 Nov 2026).
 - **Invitations and gifts are separate things** (founder, 25 Nov 2026:
   "templates and themes are different"). An **invitation** is made from a
   template (`garden-wedding`, `hindu-wedding`) and has only its chapters. A
@@ -22,8 +28,8 @@ Read `README.md` for setup and the folder map.
   template, chapters, guests or RSVP. Names and addresses: `lib/projects.ts`.
 - **Three ways to start a gift** (founder, 25 Nov 2026): a ready-made one
   (surprises and words in place, then changed freely), a theme, or plain.
-  Ready-made gifts are in `engine/ready-made`; names for people in
-  `lib/projects.ts` (READY_MADE). Once started it's a gift like any other: which
+  Ready-made gifts are in `engine/ready-made`; their names (and theme) for
+  people in `engine/ready-made/names.js`, which Home reads through READY_MADE. Once started it's a gift like any other: which
   one it came from isn't saved. "Template" stays the word for invitations. Three so
   far: Love, "A sky for you"; Birthday, "A garden for you" (for anyone, not
   only a partner); and Anniversary, "A lake for two" (a paper crane in the box:
@@ -176,7 +182,42 @@ Read `README.md` for setup and the folder map.
   10 MB (`bodySizeLimit` in next.config, `MOST_BYTES`, the database's
   check). Drafts made before 26 Nov 2026 were in the browser (IndexedDB):
   Home moves them into the account once (`MoveDrafts.tsx`) and deletes each
-  from the browser when it's saved. Two tabs editing one draft overwrite each other
+  from the browser when it's saved. The editor's actions sit at the top right
+  (`components/Actions.jsx`; founder, 27 Nov 2026): the save status, ▶ Preview
+  and Publish (Share once it's live and unchanged), in the right panel's header,
+  or floating over the canvas when there's no right panel (an invitation with
+  nothing selected); the left header is just ‹ Home. Publish opens the same box as Home's menu (`home/Publish.tsx`) and
+  saves the latest changes first (`beforePublish`), so it never publishes an
+  older version. The left side is a rail of tabs like Figma's
+  (`components/Toolbar/Toolbar.jsx`, founder 27 Nov 2026): Home, then for a
+  gift Layers · Basics · Surprises · Themes (the big theme pictures), for an
+  invitation Chapters; one panel at a time (the editor keeps which: `leftTab`).
+  With nothing selected the right panel is a gift's own settings, short
+  enough to see at once (`GiftSettings` in Inspector.jsx): the theme as one
+  line ("Theme & ready-made": clicking it opens, under it, that theme's
+  ready-made gifts, `ReadyMades.jsx`; choosing one asks, then starts the page
+  again from it, keeping who it's for: `START_FROM`; "Change theme" opens the
+  Theme tab), a Plain page's colour (five swatches
+  and any colour: the rainbow circle with a +, our own picker in
+  `shared/ColorInput.jsx`, used for every colour in the editor; the browser's
+  own can't be styled), and Opening (who it's for; the words, typed or picked from
+  the ▾; its help is an ⓘ tooltip). Surprises and Basics are tiles with a small picture of each element
+  (`public/elements/{type}.webp`, ~5–15 KB): click one to add it in the middle
+  of the view, or drag it onto the page (it lands where it's let go: `DROP_TYPE`
+  in Canvas.jsx). The pictures were made (27 Nov 2026) by rendering each real
+  element alone with its defaults (hints hidden; the basics and voice note as
+  the editor shows them) in headless Chrome, cropped and saved as WebP; if an
+  element's look changes, make its picture again the same way. A gift's Layers list (top-most first): drag a
+  row up or down to put it in front of or behind others (`PLACE_LAYER`; the
+  rows slide aside while dragging); a press without moving selects it. The
+  canvas has two tools, at the start of the zoom bar: Move (V, the default:
+  elements and the theme's balloons don't react to the pointer, so anything,
+  even a scratch card, can be picked up and dragged; double-click still types)
+  and Try it (the pointer, I: they work as on the gift); Move is the hand. A
+  gift with something on it also has Clear all (🗑, at the end of that bar):
+  it warns how many elements go, that there's no undo, and keeps the theme
+  and who it's for (`CLEAR_ALL`). Two
+  tabs editing one draft overwrite each other
   (last one wins); the preview passes over pages older than the saved draft. Removing a chapter asks first; putting it back restores
   its place and its first words. Text typed on the page keeps its letters
   (`readText` in EditableText).
@@ -189,7 +230,12 @@ Read `README.md` for setup and the folder map.
   the reducer). Words and settings are shared; only place, size of words and
   alignment differ. The editor passes `shown` (blocks placed for the chosen
   device) to the canvas and panels, and adds `layout` to UPDATE_FRAME/ADD_BLOCK.
-  Ready-made gifts place everything by hand in all three. A gift's theme is
+  Ready-made gifts place everything by hand in all three, and keep those wide
+  places as `first` on each element: "Arrange again" (on the device switch,
+  shown only once something has moved there: `movedSinceStart`) puts them back
+  (founder, 27 Nov 2026: it used to re-derive everything from Mobile); things
+  added since, and gifts started from a theme, are worked out from the phone's.
+  Gifts started before 27 Nov 2026 have no `first`. A gift's theme is
   drawn as wide as the page, so decorations are placed from `world.width`.
 - **Themes made of scenes:** Love (a night of lanterns; "looks really good"),
   Birthday (a party under the jacarandas) and Anniversary (lamps on Phewa Lake)
@@ -202,12 +248,24 @@ Read `README.md` for setup and the folder map.
 - **Theme layer:** the live canvas is only as tall as the screen and follows the
   scroll (`ThemeLayer.jsx`): whole-page
   drawing every frame isn't possible there. Swiping scrolls; tapping bursts.
-- **Home (`/home`)** is two plain lists, read from the database on the server
-  (the made-up samples are gone). A row's menu: Edit, Preview, Publish (the
-  first time with an activation code), Publish changes (once it's been edited
-  since), Share link (copy it) and Delete; all in `Row.tsx` + `Publish.tsx`.
-  Status: draft until published; an invitation is past after its day. Buttons
-  without a feature (Guests, Take offline) use `NotYetButton`, which says so.
+- **Home (`/home`)** (rebuilt 27 Nov 2026; the founder: used once in a while,
+  a gift for an occasion, a wedding once in a lifetime, so no grid of
+  numbers). Its top feels like what's happening (`components/home/Mood.tsx`,
+  chosen in the page): a live wedding (lively: Live dot, countdown, opens),
+  else a gift opened this week (sweet: "Soni opened your gift"), else one
+  sent this week and not opened, else a special day within 30 days ("Soni's
+  birthday is in 9 days" → the right ready-made, name filled in), else a
+  gentle "Who deserves a little surprise this week?". Then two short banners
+  (New gift, New wedding invitation), then Yours as covers with one status
+  line each and a ··· menu (`YoursCard.tsx`: Edit, Preview, Publish, Share
+  link, Delete; Plain gifts get a cover in their own colour), then Coming up
+  (`ComingUp.tsx`: special days, add / forget). After publishing a gift,
+  Publish offers to remember the person's birthday or anniversary
+  (`RememberDay.tsx`). Special days are `special_days` in the database
+  (`lib/special-days.ts`; international dates for now, `calendar` ready for
+  BS). Opens are recorded by the opened page itself (`noteOpen`, once a
+  visit; not the sender's own, not link-preview bots). Not yet: RSVP numbers
+  on the wedding card, email reminders, BS dates, Nepali festival dates.
 - **Links:** `/g/…` (gifts) and `/i/…` (invitations) open the built-in demos
   (`lib/demos.ts`) or else the published page (`open_page`), with a link
   preview worked out from it (`previewOf` in link-preview.ts).

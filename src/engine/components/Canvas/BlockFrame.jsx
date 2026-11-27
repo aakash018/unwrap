@@ -5,6 +5,8 @@
 //   • drag            → move it          (useFrameGestures)
 //   • handles         → resize / rotate  (SelectionBox)
 //   • double-click    → type into text blocks
+// With the Move tool (`tool`, Canvas.jsx) nothing inside it gets the pointer:
+// a gift box doesn't open, a scratch card doesn't scratch; it's only moved.
 //
 // Two ways a block can respond to width changes (set in blocks/index.js):
 //   resize: 'reflow' – content fills the new width (text re-wraps, photos grow)
@@ -20,7 +22,7 @@ import SelectionBox from './SelectionBox';
 // pageWidth: on a wide page (Tablet / Desktop view) a section fills the
 // whole width, and every other element keeps its place in the layout's column
 // (`column` wide) in the middle.
-export default function BlockFrame({ block, isSelected, zoom, dispatch, pageWidth = PAGE_WIDTH, column = PAGE_WIDTH }) {
+export default function BlockFrame({ block, isSelected, zoom, dispatch, pageWidth = PAGE_WIDTH, column = PAGE_WIDTH, tool = 'interact' }) {
   const def = BLOCKS[block.type];
   const { Component } = def;
   const { x, y, w, rotation } = block.frame;
@@ -81,7 +83,7 @@ export default function BlockFrame({ block, isSelected, zoom, dispatch, pageWidt
         if (!e.currentTarget.contains(e.relatedTarget)) setEditing(false);
       }}
     >
-      <div style={def.resize === 'scale' ? { width: def.width, zoom: w / def.width } : undefined}>
+      <div style={{ ...(def.resize === 'scale' && { width: def.width, zoom: w / def.width }), ...(tool === 'move' && !isEditing && { pointerEvents: 'none' }) }}>
         <Component
           props={block.props}
           isSelected={isSelected}

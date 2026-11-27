@@ -1,14 +1,30 @@
 // The picture of a template, a theme or a ready-made gift. Its parent decides the size.
+// Where there's no picture (the Plain theme), the page's own colour, with its
+// title quietly in the middle (`background`, `label`).
 
 import Image from "next/image";
 import { COVERS } from "@/covers";
 import type { ReadyMadeId, TemplateId, ThemeId } from "@/engine/page/types";
 
-export default function Cover({ of, sizes }: { of: TemplateId | ThemeId | ReadyMadeId; sizes: string }) {
+// a dark page colour gets light words on its cover
+const isDark = (hex?: string) => {
+  const n = parseInt(hex?.replace("#", "") ?? "", 16);
+  if (!hex || Number.isNaN(n)) return false;
+  return 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) < 140;
+};
+
+type Props = { of: TemplateId | ThemeId | ReadyMadeId; sizes: string; background?: string; label?: string };
+
+export default function Cover({ of, sizes, background, label }: Props) {
   const picture = COVERS[of];
   return (
-    <span className="relative block aspect-5/7 w-full overflow-hidden rounded-md bg-[#fbf7f0] ring-1 ring-ink/8 ring-inset">
+    <span className="relative block aspect-5/7 w-full overflow-hidden rounded-md bg-[#fbf7f0] ring-1 ring-ink/8 ring-inset" style={!picture && background ? { background } : undefined}>
       {picture && <Image src={picture} alt="" fill sizes={sizes} placeholder="blur" className="object-cover" />}
+      {!picture && label && (
+        <span className={`absolute inset-0 grid place-items-center p-3 text-center text-[13px] leading-snug ${isDark(background) ? "text-white/75" : "text-ink/55"}`}>
+          <span className="line-clamp-4">{label}</span>
+        </span>
+      )}
     </span>
   );
 }

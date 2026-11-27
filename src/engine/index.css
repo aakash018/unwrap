@@ -6,6 +6,12 @@
 @source './';
 @source '../components/open';
 @source '../components/editor';
+/* the Publish box, which the editor shares with Home */
+@source '../components/home/Publish.tsx';
+@source '../components/home/RememberDay.tsx';
+@source '../components/home/Dialog.tsx';
+@source '../components/home/Icon.tsx';
+@source '../components/home/styles.ts';
 @source '../app/**/*.tsx';
 
 /* Design tokens — taken from the Unwrap landing page.
@@ -27,6 +33,10 @@
   --color-line: #e6e2dc;
   --color-backdrop: #ebe8e3;
   --color-accent: #b4432f;
+  /* …and Home's, for the Publish box it shares (app/(site)/globals.css) */
+  --color-soft: #66686c;
+  --color-hover: #f6f6f6;
+  --color-wine: #6a1a2b;
 
   /* Gift palette */
   --color-paper: #fffdf8; /* letters, polaroids, cards */

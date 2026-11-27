@@ -140,6 +140,11 @@ export function placesIn(blocks, layout) {
   return new Map(blocks.map(({ id, frame, frames }) => [id, frames?.[layout] ?? { ...frame, x: frame.x + middle, y: Math.round(down(frame.y)) }]));
 }
 
+// Has anything been moved in this wide layout since the gift was started?
+// (Then "Arrange again" can put it back: ARRANGE in pageReducer.js.)
+export const movedSinceStart = (blocks, layout) =>
+  layout !== 'mobile' && blocks.some(({ frames, first }) => JSON.stringify(frames?.[layout]) !== JSON.stringify(first?.[layout]));
+
 // Where on the phone something put at `y` in a wide layout belongs.
 export function phoneHeight(blocks, layout, y) {
   const places = placesIn(blocks, layout);

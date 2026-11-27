@@ -4,6 +4,7 @@
 //                   a ready-made one, and changed)
 
 import type { ReadyMadeId, TemplateId, ThemeId } from "@/engine/page/types";
+import { READY_MADE_NAMES } from "@/engine/ready-made/names";
 
 export type Kind = "invitation" | "gift";
 
@@ -20,11 +21,8 @@ export const THEMES: { id: ThemeId; name: string }[] = [
   { id: "plain", name: "Plain" },
 ];
 
-export const READY_MADE: { id: ReadyMadeId; name: string; note: string }[] = [
-  { id: "love-sky", name: "A sky for you", note: "Love. Roses to unwrap, notes, photos, a letter, your voice, a promise to scratch off, and three hidden messages." },
-  { id: "birthday-garden", name: "A garden for you", note: "Birthday. Butterflies to let out, notes, photos, a letter, your singing, a coupon to scratch off, and candles to blow out." },
-  { id: "anniversary-lake", name: "A lake for two", note: "Anniversary. A paper crane to unwrap, notes, photos of you two, a letter, your song, a promise for the year ahead, and lamps to set afloat." },
-];
+// (their names live with the engine: engine/ready-made/names.js)
+export const READY_MADE = READY_MADE_NAMES as { id: ReadyMadeId; name: string; note: string }[];
 
 export const templateName = (id: TemplateId) => TEMPLATES.find((template) => template.id === id)?.name ?? id;
 export const themeName = (id: ThemeId) => THEMES.find((theme) => theme.id === id)?.name ?? id;
@@ -50,6 +48,7 @@ export type Invitation = Project & {
 export type Gift = Project & {
   kind: "gift";
   theme: ThemeId;
+  background?: string; // its page colour (a Plain one's cover)
   toName?: string;
 };
 

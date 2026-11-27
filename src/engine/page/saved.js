@@ -29,5 +29,5 @@ export function toSaved({ kind, template, theme, background, opening, blocks }) 
   if (kind === 'invitation') {
     return { format: FORMAT, kind, template, chapters: blocks.map(({ id, type, props }) => ({ id, type, props })) };
   }
-  return { format: FORMAT, kind, theme, background, ...(opening && { opening }), elements: blocks.map(({ id, type, frame, frames, props }) => ({ id, type, frame, ...(frames && { frames }), props })) };
+  return { format: FORMAT, kind, theme, background, ...(opening && { opening }), elements: blocks.map(({ id, type, frame, frames, first, props }) => ({ id, type, frame, ...(frames && { frames }), ...(first && { first }), props })) };
 }

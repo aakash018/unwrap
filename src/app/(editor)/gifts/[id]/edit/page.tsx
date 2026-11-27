@@ -16,5 +16,5 @@ export default async function EditPage({ params }: PageProps<"/gifts/[id]/edit">
   await requireUser(editUrl("gift", id));
   const project = await loadProject(id); // (only ever one of yours)
   if (project?.kind !== "gift") notFound();
-  return <Edit kind="gift" id={id} saved={project.saved} toName={project.toName} />;
+  return <Edit kind="gift" id={id} saved={project.saved} slug={project.slug} changed={project.changed} />;
 }

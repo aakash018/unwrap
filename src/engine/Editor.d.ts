@@ -9,6 +9,7 @@ type Props = {
   channel: string;
   onHome: () => void;
   status: string;
+  publish?: { label: string; onClick: () => void }; // the header's Publish button
 };
 
 export default function Editor(props: Props): ReactElement;

@@ -23,6 +23,7 @@
 //   channel    – a name shared with that preview (its id)
 //   onHome     – called to leave the editor
 //   status     – a word for the header: 'Saved', 'Saving…'
+//   publish    – { label, onClick } for the header's Publish button (optional)
 'use client';
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
@@ -31,6 +32,7 @@ import Canvas from './components/Canvas/Canvas';
 import Inspector, { showsInspector } from './components/Inspector/Inspector';
 import { pageReducer, openPage } from './state/pageReducer';
 import { toSaved } from './page/saved';
+import Actions from './components/Actions';
 import { sendPage, answerPreviews } from './preview/channel';
 import { BLOCKS } from './blocks';
 import { shownIn } from './page/layouts';
@@ -46,7 +48,7 @@ function savedDevice() {
   }
 }
 
-export default function Editor({ saved, onChange, previewUrl, channel, onHome, status }) {
+export default function Editor({ saved, onChange, previewUrl, channel, onHome, status, publish }) {
   const [page, change] = useReducer(pageReducer, saved, openPage);
 
   // Mobile · Tablet · Desktop. A gift has a layout for each: what's moved is
@@ -107,12 +109,18 @@ export default function Editor({ saved, onChange, previewUrl, channel, onHome, s
   // Open (or switch to) the Preview tab.
   const openPreview = () => window.open(previewUrl, `unwrap-preview-${channel}`);
 
+  // saved · ▶ preview · Publish: in the right panel's header, or over the
+  // canvas when there's no right panel
+  const actions = <Actions status={status} onPreview={openPreview} publish={publish} />;
+  const [leftTab, setLeftTab] = useState(null); // the left rail's open tab (null: its first)
+  const panel = showsInspector(page);
+
   return (
     // (the right panel only shows when there's something in it)
-    <div className={`grid h-screen overflow-hidden ${showsInspector(page) ? 'grid-cols-[240px_1fr_248px]' : 'grid-cols-[240px_1fr]'}`}>
-      <Toolbar page={shown} dispatch={dispatch} onAdd={addBlock} onPreview={openPreview} onHome={onHome} status={status} />
-      <Canvas page={shown} dispatch={dispatch} apiRef={canvasApi} device={device} onDevice={chooseDevice} />
-      {showsInspector(page) && <Inspector page={shown} dispatch={dispatch} />}
+    <div className={`grid h-screen overflow-hidden ${panel ? 'grid-cols-[304px_1fr_248px]' : 'grid-cols-[304px_1fr]'}`}>
+      <Toolbar page={shown} dispatch={dispatch} onAdd={addBlock} onHome={onHome} open={leftTab} onOpen={setLeftTab} />
+      <Canvas page={shown} dispatch={dispatch} apiRef={canvasApi} device={device} onDevice={chooseDevice} actions={panel ? null : actions} />
+      {panel && <Inspector page={shown} dispatch={dispatch} actions={actions} onShowThemes={() => setLeftTab('theme')} />}
     </div>
   );
 }

@@ -30,5 +30,5 @@ export default async function OpenPage({ params }: PageProps<"/g/[slug]">) {
   if (demo) return <Open demo={demo} />;
   const saved = await published(slug);
   if (!saved) notFound();
-  return <OpenPublished saved={saved} lines={[]} />;
+  return <OpenPublished slug={slug} saved={saved} lines={[]} />;
 }

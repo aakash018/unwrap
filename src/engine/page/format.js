@@ -4,9 +4,10 @@
 //
 //   an invitation: { format, kind: 'invitation', template, chapters: [{ id, type, props }] }
 //   a gift:        { format, kind: 'gift', theme, background, opening?,
-//                    elements: [{ id, type, frame, frames?, props }] }
+//                    elements: [{ id, type, frame, frames?, first?, props }] }
 //                    (opening: { name?, words? } – on its loader, page/Loader.jsx)
-//                    (frame: on a phone; frames: on tablet and desktop, see layouts.js)
+//                    (frame: on a phone; frames: on tablet and desktop, see layouts.js;
+//                    first: the frames it started with, which "Arrange again" puts back)
 
 import { newId } from '../utils/newId';
 

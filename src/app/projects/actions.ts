@@ -4,7 +4,7 @@
 "use server";
 
 import type { Saved } from "@/engine/page/types";
-import { createProject, deleteProject, ProjectError, publishProject, saveProject } from "@/lib/project-store";
+import { createProject, deleteProject, noteOpened, ProjectError, publishProject, saveProject } from "@/lib/project-store";
 import { isProjectId, shareUrl, type Kind } from "@/lib/projects";
 import { getUser } from "@/lib/user";
 
@@ -63,5 +63,15 @@ export async function publish(id: string, kind: Kind, code: string): Promise<Res
     return { ok: true, url: shareUrl(kind, slug) };
   } catch (problem) {
     return problemOf(problem, "Publishing");
+  }
+}
+
+// A published page was opened (called by the page itself, once it's showing:
+// link previews in Messenger or Viber don't count). Never fails out loud.
+export async function noteOpen(slug: string): Promise<void> {
+  try {
+    await noteOpened(slug);
+  } catch (problem) {
+    console.error("An open wasn't noted:", problem);
   }
 }
